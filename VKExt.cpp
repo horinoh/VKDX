@@ -112,9 +112,9 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology PT, const uint32
 	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
 #endif
 
 	for (auto& i : Threads) { i.join(); }
@@ -157,9 +157,9 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, cons
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }
@@ -220,9 +220,9 @@ void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<V
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineTsMsFs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipelineTsMsFs, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }

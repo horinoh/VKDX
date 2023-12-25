@@ -1,7 +1,5 @@
 #pragma once
 
-#include <fstream>
-
 #include "DDSTextureLoader.h"
 #include "WICTextureLoader.h"
 
@@ -11,18 +9,6 @@ class DXImage : public DXExt
 {
 private:
 	using Super = DXExt;
-
-public:
-	static bool IsDDS(const std::filesystem::path& Path) {
-		std::ifstream In(data(Path.string()), std::ios::in | std::ios::binary);
-		if (!In.fail()) {
-			std::array<uint32_t, 2> Header = { 0, 0 };
-			In.read(reinterpret_cast<char*>(data(Header)), sizeof(Header));
-			In.close();
-			return 0x20534444 == Header[0] && 124 == Header[1];
-		}
-		return false;
-	}
 
 public:
 	class XTKTexture : public Texture

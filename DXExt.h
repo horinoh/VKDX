@@ -36,13 +36,16 @@ protected:
 	//	CreatePipelineState_XXX(TRUE, ...);
 	//}
 	virtual void CreateDescriptor() override {
+		auto& Desc = DsvDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
+
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 	
-		DsvCPUHandles.emplace_back();
-		auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-		DsvCPUHandles.back().emplace_back(CDH);
+		Handle.emplace_back(CDH);
 	}
 	//!< 深度クリア、レンダーターゲットへの設定をすること
 	//virtual void PopulateCommandList(const size_t i) override {

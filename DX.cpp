@@ -1061,7 +1061,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 	}
 }
 
-void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
+void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 	ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
@@ -1140,7 +1140,7 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
 	LOG_OK();
 }
 
-void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST, 
+void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 	ID3D12Device* Device, 
 	ID3D12RootSignature* RS,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs, 

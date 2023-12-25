@@ -96,30 +96,31 @@ protected:
 		CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, SBCs); 
 	}
 	virtual void CreateDescriptor() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-#ifndef USE_STATIC_SAMPLER
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Sampler = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Sampler, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
-#endif
-
 		{
-			CbvSrvUavGPUHandles.emplace_back();
+			auto& Desc = CbvSrvUavDescs.emplace_back();
+			auto& Heap = Desc.first;
+			auto& Handle = Desc.second;
 
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
+
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
 			const auto& Tex = XTKTextures[0];
-			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			Device->CreateShaderResourceView(COM_PTR_GET(Tex.Resource), &Tex.SRV, CDH);
-			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
-			//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); 
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
-		}
 
+			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+			Handle.emplace_back(GDH);
+		}
 #ifndef USE_STATIC_SAMPLER
 		{
-			SamplerGPUHandles.emplace_back();
-			auto CDH = SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			auto GDH = SamplerDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+			auto& Desc = SamplerDescs.emplace_back();
+			auto& Heap = Desc.first;
+			auto& Handle = Desc.second;
+
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD_Sampler = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Sampler, COM_PTR_UUIDOF_PUTVOID(Heap)));
+
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
 			constexpr D3D12_SAMPLER_DESC SD = {
 				.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
 				.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -130,7 +131,9 @@ protected:
 				.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			};
 			Device->CreateSampler(&SD, CDH);
-			SamplerGPUHandles.back().emplace_back(GDH);
+
+			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+			Handle.emplace_back(GDH);
 		}
 #endif
 	}
@@ -162,15 +165,23 @@ protected:
 				const std::array CHs = { SwapChainCPUHandles[i] };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
+				const auto& DescSRV = CbvSrvUavDescs[0];
+				const auto& HeapSRV = DescSRV.first;
+				const auto& HandleSRV = DescSRV.second;
+
 #ifdef USE_STATIC_SAMPLER
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const std::array DHs = { COM_PTR_GET(HeapSRV) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
+				CL->SetGraphicsRootDescriptorTable(0, HandleSRV[0]); //!< SRV
 #else
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
+				auto DescSMP = SamplerDescs[0];
+				auto HeapSMP = DescSMP.first;
+				auto HandleSMP = DescSMP.second;
+
+				const std::array DHs = { COM_PTR_GET(HeapSRV), COM_PTR_GET(HeapSMP) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
-				CL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles.back()[0]); //!< Sampler
+				CL->SetGraphicsRootDescriptorTable(0, HandleSRV[0]); //!< SRV
+				CL->SetGraphicsRootDescriptorTable(1, HandleSMP[0]); //!< Sampler
 #endif
 				CL->ExecuteBundle(BCL);
 			}

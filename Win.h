@@ -72,6 +72,9 @@
 #include <string>
 #include <stack>
 
+#include <array>
+#include <fstream>
+
 #ifdef USE_EXPERIMENTAL
 #include <experimental/coroutine>
 #else
@@ -169,6 +172,30 @@ public:
 	[[nodiscard]] LONG GetClientRectWidth() const { return GetWidth(GetRect()); }
 	[[nodiscard]] LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
 	[[nodiscard]] FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
+
+public:
+	static bool IsDDS(const std::filesystem::path& Path) {
+		std::ifstream In(data(Path.string()), std::ios::in | std::ios::binary);
+		if (!In.fail()) {
+			std::array<uint32_t, 2> Header = { 0, 0 };
+			In.read(reinterpret_cast<char*>(data(Header)), sizeof(Header));
+			In.close();
+			Logf("IsDDS == %s\n", 0x20534444 == Header[0] && 124 == Header[1] ? "true" : "false");
+			return 0x20534444 == Header[0] && 124 == Header[1];
+		}
+		return false;
+	}
+	static bool IsKTX(const std::filesystem::path& Path) {
+		std::ifstream In(data(Path.string()), std::ios::in | std::ios::binary);
+		if (!In.fail()) {
+			std::array<uint32_t, 4> Header = { 0, 0, 0, 0 };
+			In.read(reinterpret_cast<char*>(data(Header)), sizeof(Header));
+			In.close();
+			Logf("IsKTX == %s\n", 0x58544bab == Header[0] && 0xbb313120 == Header[1] && 0x0a1a0a0d == Header[2] && 0x04030201 == Header[3] ? "true" : "false");
+			return 0x58544bab == Header[0] && 0xbb313120 == Header[1] && 0x0a1a0a0d == Header[2] && 0x04030201 == Header[3];
+		}
+		return false;
+	}
 
 	[[nodiscard]] static std::string ToString(std::wstring_view WStr) {
 #if 1

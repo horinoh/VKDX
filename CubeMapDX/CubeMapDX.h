@@ -166,19 +166,22 @@ protected:
 #endif
 	}
 	virtual void CreateDescriptor() override {
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
+
 		{
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N, SRV0, SRV1
 #pragma endregion
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 		}
 
 		{
-			CbvSrvUavGPUHandles.emplace_back();
-			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			//!< CBV
 #pragma region FRAME_OBJECT
@@ -187,7 +190,7 @@ protected:
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH);
-				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				Handle.emplace_back(GDH);
 				CDH.ptr += IncSize;
 				GDH.ptr += IncSize;
 			}
@@ -196,12 +199,12 @@ protected:
 			//!<	(D3D12_SRV_DIMENSION_TEXTURECUBE を指定する必要がある為、(nullptr で済ませるのではなく) 明示的に SRV を指定すること)
 			//!<	(リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる)
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 
 		}
@@ -232,29 +235,35 @@ protected:
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
+				const auto& HandleDSV = DsvDescs[0].second;
+
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				CL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifndef USE_SKY_DOME
-				CL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 				const std::array CHs = { SwapChainCPUHandles[i] };
 #ifdef USE_SKY_DOME
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 #else
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
 #endif
 				{
-					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+					const auto& Desc = CbvSrvUavDescs[0];
+					const auto& Heap = Desc.first;
+					const auto& Handle = Desc.second;
+
+					const std::array DHs = { COM_PTR_GET(Heap) };
 					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 #pragma region FRAME_OBJECT
 					//!< CBV
-					CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]); 
+					CL->SetGraphicsRootDescriptorTable(0, Handle[i]); 
 #pragma endregion
 					//!< SRV0, SRV1
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
-					CL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
+					CL->SetGraphicsRootDescriptorTable(1, Handle[SCD.BufferCount]);
 				}
 
 				CL->ExecuteBundle(BCL);

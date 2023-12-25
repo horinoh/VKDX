@@ -51,30 +51,33 @@ public:
 	public:
 		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
-			GliTexture = gli::load(data(Path.string()));
-			assert(!GliTexture.empty() && "Load image failed");
+			//!< 対応フォーマット DDS, KTX
+			if (IsDDS(Path) || IsKTX(Path)) {
+				GliTexture = gli::load(data(Path.string()));
+				assert(!GliTexture.empty() && "Load image failed");
 
-			const auto Format = ToVkFormat(GliTexture.format());
-			VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP, 
-				gli::is_target_cube(GliTexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, 
-				ToVkImageType(GliTexture.target()), 
-				Format, 
-				VkExtent3D({ .width = static_cast<const uint32_t>(GliTexture.extent(0).x), .height = static_cast<const uint32_t>(GliTexture.extent(0).y), .depth = static_cast<const uint32_t>(GliTexture.extent(0).z) }),
-				static_cast<const uint32_t>(GliTexture.levels()), 
-				static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces()), 
-				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+				const auto Format = ToVkFormat(GliTexture.format());
+				VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP,
+					gli::is_target_cube(GliTexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+					ToVkImageType(GliTexture.target()),
+					Format,
+					VkExtent3D({ .width = static_cast<const uint32_t>(GliTexture.extent(0).x), .height = static_cast<const uint32_t>(GliTexture.extent(0).y), .depth = static_cast<const uint32_t>(GliTexture.extent(0).z) }),
+					static_cast<const uint32_t>(GliTexture.levels()),
+					static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces()),
+					VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
-			const VkImageViewCreateInfo IVCI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.image = Image,
-				.viewType = ToVkImageViewType(GliTexture.target()),
-				.format = Format,
-				.components = ToVkComponentMapping(GliTexture.swizzles()),
-				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
-			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
+				const VkImageViewCreateInfo IVCI = {
+					.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.image = Image,
+					.viewType = ToVkImageViewType(GliTexture.target()),
+					.format = Format,
+					.components = ToVkComponentMapping(GliTexture.swizzles()),
+					.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
+				};
+				VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
+			}
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {

@@ -591,7 +591,8 @@ public:
 	};
 #endif
 	virtual void CreatePipelineState() {}
-	static void CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
+	//!< VS, PS, DS, HS, GS
+	static void CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 		ID3D12Device* Device, ID3D12RootSignature* RS,
 		const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
 		const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
@@ -601,7 +602,8 @@ public:
 		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, 
 		const std::vector<DXGI_FORMAT>& RTVFormats,
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);
-	static void CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
+	//!< AS, MS, PS
+	static void CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 		ID3D12Device* Device, ID3D12RootSignature* RS,
 		const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 		const D3D12_RASTERIZER_DESC& RD,
@@ -685,7 +687,12 @@ protected:
 	std::vector<std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>> CbvSrvUavGPUHandles;
 	std::vector<std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>> SamplerGPUHandles;
 	std::vector<std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>> RtvCPUHandles;
-	std::vector<std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>> DsvCPUHandles;
+
+	//!< first にヒープ、second にハンドル
+	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>> CbvSrvUavDescs;
+	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>> SamplerDescs;
+	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> RtvDescs;
+	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> DsvDescs;
 
 	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
 

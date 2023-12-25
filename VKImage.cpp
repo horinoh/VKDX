@@ -63,9 +63,9 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 	assert(false && "Not supported");
 	return VK_IMAGE_TYPE_MAX_ENUM;
 }
-VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle Swizzle)
+VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 {
-	switch (Swizzle)
+	switch (GLISwizzle)
 	{
 	case gli::SWIZZLE_ZERO: return VK_COMPONENT_SWIZZLE_ZERO;
 	case gli::SWIZZLE_ONE: return VK_COMPONENT_SWIZZLE_ONE;

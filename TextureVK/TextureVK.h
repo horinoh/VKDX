@@ -83,7 +83,6 @@ protected:
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
-
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -101,10 +100,12 @@ protected:
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateDescriptor() override {
+		auto DSL = DescriptorSetLayouts[0];
+
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
-			});
-		const std::array DSLs = { DescriptorSetLayouts[0] };
+		});
+		const std::array DSLs = { DSL };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
@@ -136,11 +137,11 @@ protected:
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = 0, .stride = sizeof(VkDescriptorImageInfo)
 			}),
-		}, DescriptorSetLayouts[0]);
+		}, DSL);
 #ifdef USE_IMMUTABLE_SAMPLER
 		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 #else
-		const auto DII = VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII = VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 #endif
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DII);
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());

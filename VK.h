@@ -841,7 +841,8 @@ protected:
 	};
 #endif
 	virtual void CreatePipeline() {}
-	static void CreatePipeline_(VkPipeline& PL,
+	//!< VS, FS, TES, TCS, GS
+	static void CreatePipelineVsFsTesTcsGs(VkPipeline& PL,
 		const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 		const VkPipelineRasterizationStateCreateInfo& PRSCI,
@@ -850,7 +851,8 @@ protected:
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
 		VkPipelineCache PC = VK_NULL_HANDLE);
-	static void CreatePipeline__(VkPipeline& PL,
+	//!< TS, MS, FS
+	static void CreatePipelineTsMsFs(VkPipeline& PL,
 		const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPipelineRasterizationStateCreateInfo& PRSCI,
 		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
@@ -1020,7 +1022,6 @@ protected:
 
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
-
 	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	
 	std::vector<VkViewport> Viewports;
