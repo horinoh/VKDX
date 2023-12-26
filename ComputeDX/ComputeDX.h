@@ -57,29 +57,38 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&CPSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
 	}
 	virtual void CreateDescriptor() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
 
-		CbvSrvUavGPUHandles.emplace_back();
-		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-		//const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
+
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 		
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
 	}
 	
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 		{
+			const auto& Desc = CbvSrvUavDescs[0];
+			const auto& Heap = Desc.first;
+			const auto& Handle = Desc.second;
+
 			const auto CCL = COM_PTR_GET(ComputeCommandLists[i]);
 			const auto CCA = COM_PTR_GET(ComputeCommandAllocators[0]);
 			VERIFY_SUCCEEDED(CCL->Reset(CCA, PS)); {
 				CCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				CCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+				CCL->SetComputeRootDescriptorTable(0, Handle[0]);
 
 				CCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 			} VERIFY_SUCCEEDED(CCL->Close());

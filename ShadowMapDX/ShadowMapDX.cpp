@@ -272,6 +272,8 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 		//!< パス0 : (シャドウキャスタ描画用)
 		{
+			const auto& HandleDSV = DsvDescs[0].second;
+
 			const std::array VPs = { D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = static_cast<FLOAT>(ShadowMapExtentW), .Height = static_cast<FLOAT>(ShadowMapExtentH), .MinDepth = 0.0f, .MaxDepth = 1.0f }) };
 			const std::array SCs = { D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(ShadowMapExtentW), .bottom = static_cast<LONG>(ShadowMapExtentH) }) };
 			GCL->RSSetViewports(static_cast<UINT>(size(VPs)), data(VPs));
@@ -279,23 +281,23 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			const auto& DsvDH = DsvDescriptorHeaps[0];
-			const auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
+				GCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
 			}
 			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 0> RtvDHs = {};
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(0)
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &HandleDSV[0]); //!< DSV(0)
 			}
 			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				const std::array DHs = { COM_PTR_GET(DH) };
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
-				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV(0)
+				GCL->SetGraphicsRootDescriptorTable(0, Handle[0]); //!< CBV(0)
 			}
 			GCL->ExecuteBundle(BGCL0);
 		}
@@ -346,26 +348,24 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 #endif
 			}
 			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				const std::array DHs = { COM_PTR_GET(DH) };
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
 
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
 #pragma region FRAME_OBJECT
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
-				GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SCD.BufferCount;
+				GCL->SetGraphicsRootDescriptorTable(0, Handle[i]); //!< CBV
 #pragma endregion
-				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV(1)
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				GCL->SetGraphicsRootDescriptorTable(0, Handle[SCD.BufferCount]); //!< SRV(1)
 
 #ifndef USE_SHADOWMAP_VISUALIZE
 #pragma region FRAME_OBJECT
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				GCL->SetGraphicsRootDescriptorTable(1, GDH); //!< CBV(2)
+				GCL->SetGraphicsRootDescriptorTable(1, Handle[SCD.BufferCount + 1 + i]); //!< CBV(2)
 #pragma endregion
 #endif
 			}

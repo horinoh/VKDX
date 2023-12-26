@@ -332,6 +332,10 @@ protected:
 	}
 	virtual void CreateDescriptor() override {
 		{
+			auto& Desc = CbvSrvUavDescs.emplace_back();
+			auto& Heap = Desc.first;
+			auto& Handle = Desc.second;
+
 			//!< パス0 + パス1
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
@@ -342,30 +346,19 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount * 2 + 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N * 2 + SRV
 #endif
 #pragma endregion
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-		}
-		{
-			//!< パス0 + パス1
-#ifdef USE_SHADOWMAP_VISUALIZE
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1 + 0, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
-#else
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1 + 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV + DSV
-#endif
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-		}
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 
-		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[0];
-			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
-			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
-
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 			//!< パス0
 #pragma region FRAME_OBJECT
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				Device->CreateConstantBufferView(&CBVD, CDH); 
+				Handle.emplace_back(GDH);
+				CDH.ptr += IncSize; //!< CBV
+				GDH.ptr += IncSize;
 			}
 #pragma endregion
 
@@ -374,9 +367,12 @@ protected:
 				.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
 				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({ .MostDetailedMip = 0, .MipLevels = DepthTextures[0].Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = DepthTextures[0].Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 			};
-			Device->CreateShaderResourceView(COM_PTR_GET(DepthTextures[0].Resource), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+			Device->CreateShaderResourceView(COM_PTR_GET(DepthTextures[0].Resource), &SRVD, CDH); 
+			Handle.emplace_back(GDH);
+			CDH.ptr += IncSize; //!< SRV
+			GDH.ptr += IncSize;
 
 #ifndef USE_SHADOWMAP_VISUALIZE
 #pragma region FRAME_OBJECT
@@ -388,21 +384,38 @@ protected:
 #endif
 		}
 		{
-			const auto& DH = DsvDescriptorHeaps[0];
-			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			auto& Desc = DsvDescs.emplace_back();
+			auto& Heap = Desc.first;
+			auto& Handle = Desc.second;
+
+			//!< パス0 + パス1
+#ifdef USE_SHADOWMAP_VISUALIZE
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1 + 0, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
+#else
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1 + 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV + DSV
+#endif
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
+
+
+			//const auto& DH = DsvDescriptorHeaps[0];
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 
 			//!< パス0
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &DepthTextures[0].DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &DepthTextures[0].DSV, CDH);
+			Handle.emplace_back(CDH);
+			CDH.ptr += IncSize; //!< DSV
 
 			//!< パス1
 			const auto SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
-			.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
-			.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-			.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = DepthTextures.back().Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+				.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = DepthTextures.back().Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 			});
 #ifndef USE_SHADOWMAP_VISUALIZE
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &SRV, CDH); 
+			CDH.ptr += IncSize; //!< SRV
 #endif
 		}
 	}

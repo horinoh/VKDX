@@ -272,66 +272,78 @@ protected:
 	virtual void CreateDescriptor() override {
 #pragma region PASS0
 		{
+			auto& DescCBV = CbvSrvUavDescs.emplace_back();
+			auto& HeapCBV = DescCBV.first;
+			auto& HandleCBV = DescCBV.second;
+
+			auto& DescRTV = RtvDescs.emplace_back();
+			auto& HeapRTV = DescRTV.first;
+			auto& HandleRTV = DescRTV.second;
+
+			auto& DescDSV = DsvDescs.emplace_back();
+			auto& HeapDSV = DescDSV.first;
+			auto& HandleDSV = DescDSV.second;
+
 			{
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
 #pragma endregion
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-			}
-			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
-			}
-			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-			}
-		}
-#pragma endregion
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapCBV)));
 
-#pragma region PASS1
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-		}
-#pragma endregion
-
-#pragma region PASS0
-		{
-			{
-				DXGI_SWAP_CHAIN_DESC1 SCD;
-				SwapChain->GetDesc1(&SCD);
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
+				auto CDH = HeapCBV->GetCPUDescriptorHandleForHeapStart();
+				auto GDH = HeapCBV->GetGPUDescriptorHandleForHeapStart();
+				const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapCBV->GetDesc().Type);
 				for (UINT i = 0; i < SCD.BufferCount; ++i) {
 					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+					Device->CreateConstantBufferView(&CBVD, CDH);
+					HandleCBV.emplace_back(GDH);
+					CDH.ptr += IncSize;
+					GDH.ptr += IncSize;
 				}
 #pragma endregion
 			}
 			{
-				const auto& DH = RtvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapRTV)));
+
+				auto CDH = HeapRTV->GetCPUDescriptorHandleForHeapStart();
+				const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapRTV->GetDesc().Type);
+				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH);
+				HandleRTV.emplace_back(CDH);
+				CDH.ptr += IncSize;
 			}
 			{
-				const auto& DH = DsvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapDSV)));
+
+				auto CDH = HeapDSV->GetCPUDescriptorHandleForHeapStart();
+				const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapDSV->GetDesc().Type);
+				Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
+				HandleDSV.emplace_back(CDH);
+				CDH.ptr += IncSize;
 			}
 		}
 #pragma endregion
 
 #pragma region PASS1
 		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[1];
-			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			{
-				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
+			auto& DescCBV = CbvSrvUavDescs.emplace_back();
+			auto& HeapCBV = DescCBV.first;
+			auto& HandleCBV = DescCBV.second;
+
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapCBV)));
+
+			auto CDH = HeapCBV->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = HeapCBV->GetGPUDescriptorHandleForHeapStart();
+			const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapCBV->GetDesc().Type);
+			Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH);
+			HandleCBV.emplace_back(GDH);
+			CDH.ptr += IncSize;
+			GDH.ptr += IncSize;
 		}
 #pragma endregion
 
@@ -382,27 +394,28 @@ protected:
 #pragma region PASS0
 			//!< ƒƒbƒVƒ…•`‰æ—p
 			{
+				const auto& HandleRTV = RtvDescs[0].second;
+				const auto& HandleDSV = DsvDescs[0].second;
+
 				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-				const auto RTDH = RtvDescriptorHeaps[0];
-				auto RTCDH = RTDH->GetCPUDescriptorHandleForHeapStart();
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(RTCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array RTCDHs = { RTCDH };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DsvDH);
+				const std::array RTCDHs = { HandleRTV[0]};
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &HandleDSV[0]);
 
 				{
-					const auto& DH = CbvSrvUavDescriptorHeaps[0];
-					const std::array DHs = { COM_PTR_GET(DH) };
+					const auto& Desc = CbvSrvUavDescs[0];
+					const auto& Heap = Desc.first;
+					const auto& Handle = Desc.second;
+
+					const std::array DHs = { COM_PTR_GET(Heap) };
 					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
-					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-					CL->SetGraphicsRootDescriptorTable(0, GDH);
+					CL->SetGraphicsRootDescriptorTable(0, Handle[i]);
 #pragma endregion
 				}
 
@@ -450,16 +463,19 @@ protected:
 
 				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+				SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 				const std::array RtvCDHs = { SCCDH };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 
-				const auto& DH = CbvSrvUavDescriptorHeaps[1];
-				const std::array DHs = { COM_PTR_GET(DH) };
+				const auto& Desc = CbvSrvUavDescs[1];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				auto SrvGDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+				CL->SetGraphicsRootDescriptorTable(0, Handle[0]);
 
 #pragma region ROOT_CONSTANT
 				CL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(HoloDraw)), &HoloDraw, 0);

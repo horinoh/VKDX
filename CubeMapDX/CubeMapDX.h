@@ -182,7 +182,7 @@ protected:
 		{
 			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
-			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 			//!< CBV
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;

@@ -159,20 +159,23 @@ protected:
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
 	}
 	virtual void CreateDescriptor() override {
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
+
 		{
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SCD.BufferCount + 4, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N, SRV0, SRV1
 #pragma endregion
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 		}
 
 		{
-			CbvSrvUavGPUHandles.emplace_back();
-			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
@@ -180,29 +183,29 @@ protected:
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { ConstantBuffers[i].Resource->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				//!< CBV
 				Device->CreateConstantBufferView(&CBVD, CDH);
-				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				Handle.emplace_back(GDH);
 				CDH.ptr += IncSize;
 				GDH.ptr += IncSize;
 			}
 #pragma endregion
 			//!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV2
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[2].Resource), &XTKTextures[2].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV3
 			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[3].Resource), &XTKTextures[3].SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			Handle.emplace_back(GDH);
 		}
 
 		Super::CreateDescriptor();
@@ -243,17 +246,21 @@ protected:
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
 
 				{
-					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+					const auto& Desc = CbvSrvUavDescs[0];
+					const auto& Heap = Desc.first;
+					const auto& Handle = Desc.second;
+
+					const std::array DHs = { COM_PTR_GET(Heap) };
 					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
 					//!< CBV
-					CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]);
+					CL->SetGraphicsRootDescriptorTable(0, Handle[i]);
 #pragma endregion
 					//!< SRV0, SRV1
-					CL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
+					CL->SetGraphicsRootDescriptorTable(1, Handle[SCD.BufferCount]);
 				}
 
 				CL->ExecuteBundle(BCL);

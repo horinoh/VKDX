@@ -247,13 +247,17 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(CL, RT); {
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
-				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
-				CL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
-				CL->SetComputeRootDescriptorTable(2, CbvSrvUavGPUHandles.back()[2]);
+				CL->SetComputeRootDescriptorTable(0, Handle[0]);
+				CL->SetComputeRootDescriptorTable(1, Handle[1]);
+				CL->SetComputeRootDescriptorTable(2, Handle[2]);
 
 				TO_CL4(CL, CL4);
 				CL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
@@ -313,36 +317,39 @@ public:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
 	virtual void CreateDescriptor() override {
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
+
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
 			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 
 			.NumDescriptors = 4, 
 			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 			.NodeMask = 0
 		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 
-		CbvSrvUavGPUHandles.emplace_back();
-		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 		//!< [0] TLAS (SRV0)
 		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [1] o—Í (UAV0)
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [2] OpacityMap (SRV1)
 		Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [3] ColorMap (SRV2)
 		Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 	}

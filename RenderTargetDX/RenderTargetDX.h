@@ -199,27 +199,34 @@ protected:
 		for (auto& i : Threads) { i.join(); }
 	}
 	virtual void CreateDescriptor() override {
+		auto& DescCBV = CbvSrvUavDescs.emplace_back();
+		auto& HeapCBV = DescCBV.first;
+		auto& HandleCBV = DescCBV.second;
+
+		auto& DescRTV = RtvDescs.emplace_back();
+		auto& HeapRTV = DescRTV.first;
+		auto& HandleRTV = DescRTV.second;
+
 #pragma region PASS0
 		{
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapRTV)));
 		}
 #pragma endregion
 
 #pragma region PASS1
 		{
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(HeapCBV)));
 		}
 #pragma endregion
 
 #pragma region PASS0
 		//!< RTV
 		{
-			RtvCPUHandles.emplace_back();
-			auto CDH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures.back().Resource), &RenderTextures.back().RTV, CDH); 
-			RtvCPUHandles.back().emplace_back(CDH);
+			auto CDH = HeapRTV->GetCPUDescriptorHandleForHeapStart();
+			Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures.back().Resource), &RenderTextures.back().RTV, CDH);
+			HandleRTV.emplace_back(CDH);
 		}
 #ifdef USE_DEPTH
 		//!< DSV
@@ -230,11 +237,10 @@ protected:
 #pragma region PASS1
 		//!< SRV
 		{
-			CbvSrvUavGPUHandles.emplace_back();
-			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+			auto CDH = HeapCBV->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = HeapCBV->GetGPUDescriptorHandleForHeapStart();
 			Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures.back().Resource), &RenderTextures.back().SRV, CDH);
-			CbvSrvUavGPUHandles.back().emplace_back(GDH);
+			HandleCBV.emplace_back(GDH);
 		}
 #pragma endregion
 	}
@@ -281,16 +287,17 @@ protected:
 #pragma region PASS0
 			//!< メッシュ描画用
 			{
+				const auto& HandleRTV = RtvDescs[0].second;
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(RtvCPUHandles.back()[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
 				CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array RTCHs = { RtvCPUHandles.back()[0] };
+				const std::array RTCHs = { HandleRTV[0] };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &HandleDSV[0]);
 #else			
 				const std::array RTCHs = { RtvCPUHandles[0] };
@@ -323,15 +330,19 @@ protected:
 #pragma region PASS1
 			//!< レンダーテクスチャ描画用
 			{
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
 				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				//!< SRV
-				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
+				CL->SetGraphicsRootDescriptorTable(0, Handle[0]); 
 
 				CL->ExecuteBundle(BCL1);
 			}

@@ -355,42 +355,45 @@ public:
 #pragma endregion
 	}
 	virtual void CreateDescriptor() override {
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
+
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 #pragma region SHADER_RECORD
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3 + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0};
 #pragma endregion
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 
-		CbvSrvUavGPUHandles.emplace_back();
-		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 		//!< [0] SRV (TLAS)
 		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); 
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [1] SRV (CubeMap)
 		Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH); 
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;		
 		//!< [2] UAV (RenderTarget)
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); 
-		CbvSrvUavGPUHandles.back().emplace_back(GDH); 
+		Handle.emplace_back(GDH); 
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize; 
 		
 #pragma region SHADER_RECORD
 		//!< [3] SRV (VB)
 		Device->CreateShaderResourceView(COM_PTR_GET(VertexBuffer.Resource), &VertexBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [4] SRV (IB)
 		Device->CreateShaderResourceView(COM_PTR_GET(IndexBuffer.Resource), &IndexBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 #pragma endregion
 
 		//!< この時点で削除してしまって良い？
@@ -459,11 +462,14 @@ public:
 
 				//!< グループ (Hit)
 				{
+					const auto& Desc = CbvSrvUavDescs[0];
+					const auto& Handle = Desc.second;
+
 					const auto Count = HitCount;
 					const auto& Range = ST.AddressRangeAndStrides[1]; {
 #pragma region SHADER_RECORD
-						const auto& VB = CbvSrvUavGPUHandles.back()[3];
-						const auto& IB = CbvSrvUavGPUHandles.back()[4];
+						const auto& VB = Handle[3];
+						const auto& IB = Handle[4];
 #pragma endregion
 						auto p = Data;
 						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
@@ -503,14 +509,18 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(CL, RT); {
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] SRV(TLAS), [1] SRV(CubeMap)
-				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+				CL->SetComputeRootDescriptorTable(0, Handle[0]);
 				//!< [2] UAV
-				CL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[2]);
+				CL->SetComputeRootDescriptorTable(1, Handle[2]);
 				//!< CBV (デスクリプタヒープとは別扱い) バックバッファ分のシェーダテーブルを作成しないで済む為に SetComputeRootConstantBufferView() を使用 
 				CL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());
 

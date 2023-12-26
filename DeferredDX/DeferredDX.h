@@ -314,7 +314,7 @@ protected:
 				{
 					auto CDH = HeapCBV->GetCPUDescriptorHandleForHeapStart();
 					auto GDH = HeapCBV->GetGPUDescriptorHandleForHeapStart();
-					const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapCBV->GetDesc().Type);
 #pragma region FRAME_OBJECT
 					for (UINT i = 0; i < SCD.BufferCount; ++i) {
 						const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
@@ -331,7 +331,7 @@ protected:
 				//!< RTV
 				{
 					auto CDH = HeapRTV->GetCPUDescriptorHandleForHeapStart();
-					const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+					const auto IncSize = Device->GetDescriptorHandleIncrementSize(HeapRTV->GetDesc().Type);
 					//!< カラー(Color)
 					Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH);
 					HandleRTV.emplace_back(CDH);
@@ -386,7 +386,7 @@ protected:
 			{
 				auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
 				auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
-				const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH); 
 				Handle.emplace_back(GDH);

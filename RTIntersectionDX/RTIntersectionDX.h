@@ -238,14 +238,18 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(CL, RT); {
-				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				const auto& Desc = CbvSrvUavDescs[0];
+				const auto& Heap = Desc.first;
+				const auto& Handle = Desc.second;
+
+				const std::array DHs = { COM_PTR_GET(Heap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] TLAS
-				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+				CL->SetComputeRootDescriptorTable(0, Handle[0]);
 				//!< [1] UAV
-				CL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
+				CL->SetComputeRootDescriptorTable(1, Handle[1]);
 
 				TO_CL4(CL, CL4);
 				CL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));

@@ -679,18 +679,7 @@ protected:
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
 
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_DSV
-
-	std::vector<std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>> CbvSrvUavGPUHandles;
-	std::vector<std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>> SamplerGPUHandles;
-	std::vector<std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>> RtvCPUHandles;
-
-	//!< first にヒープ、second にハンドル
 	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>> CbvSrvUavDescs;
-	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>> SamplerDescs;
 	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> RtvDescs;
 	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> DsvDescs;
 

@@ -140,27 +140,31 @@ public:
 		}
 	}
 	virtual void CreateDescriptor() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
 
-		CbvSrvUavGPUHandles.emplace_back();
-		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
+
+		//CbvSrvUavGPUHandles.emplace_back();
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 		Device->CreateShaderResourceView(COM_PTR_GET(VertexBuffer.Resource), &VertexBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		Device->CreateShaderResourceView(COM_PTR_GET(VertexIndexBuffer.Resource), &VertexIndexBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize; 
 		Device->CreateShaderResourceView(COM_PTR_GET(MeshletBuffer.Resource), &MeshletBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		Device->CreateShaderResourceView(COM_PTR_GET(TriangleBuffer.Resource), &TriangleBuffer.SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		Handle.emplace_back(GDH);
 
 		Super::CreateDescriptor();
 	}
@@ -191,9 +195,13 @@ public:
 					CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
 
 					{
-						const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+						const auto& Desc = CbvSrvUavDescs[0];
+						const auto& Heap = Desc.first;
+						const auto& Handle = Desc.second;
+
+						const std::array DHs = { COM_PTR_GET(Heap) };
 						CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-						CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+						CL->SetGraphicsRootDescriptorTable(0, Handle[0]);
 					}
 
 					CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
