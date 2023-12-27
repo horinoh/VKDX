@@ -56,7 +56,7 @@ protected:
 			}
 		}
 
-		CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
+		CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 	}
 
 	virtual void CreateGeometry() override {

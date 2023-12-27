@@ -453,7 +453,7 @@ public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
-	virtual void OnPreDestroy(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnPreDestroy() override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 	
@@ -529,7 +529,27 @@ public:
 	[[nodiscard]] static uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
 
 	//[[deprecated("")]]
-	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
+	static void CopyToHostVisibleDeviceMemory(const VkDevice Dev, const VkDeviceMemory DM, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE) {
+		if (Size && nullptr != Source) [[likely]] {
+			const std::array MMRs = {
+				VkMappedMemoryRange({
+					.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+					.pNext = nullptr,
+					.memory = DM,
+					.offset = MappedRangeOffset,
+					.size = MappedRangeSize
+				})
+			};
+			void* Data;
+			VERIFY_SUCCEEDED(vkMapMemory(Dev, DM, Offset, /*Size*/MappedRangeSize, static_cast<VkMemoryMapFlags>(0), &Data)); {
+				memcpy(Data, Source, Size);
+				//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
+				//!< デバイスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Dev, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+			} vkUnmapMemory(Dev, DM);
+		}
+	}
 
 #pragma region COMMAND
 	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);

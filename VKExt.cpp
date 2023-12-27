@@ -1,12 +1,43 @@
 #include "VKExt.h"
 
+//!< 画面全体を描画するようなクリアが必要無いもので使用する
+void VKExt::CreateRenderPass_None()
+{
+	constexpr std::array<VkAttachmentReference, 0> InPreAtts = {};
+	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	assert(size(ColAtts) == size(ResAtts) && "");
+	constexpr std::array<uint32_t, 0> PreAtts = {};
+	VK::CreateRenderPass(RenderPasses.emplace_back(),
+		{
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = ColorFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,	//!< 「開始時に何もしない」「終了時に保存」		
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			}),
+		},
+		{
+			VkSubpassDescription({
+				.flags = 0,
+				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+				.inputAttachmentCount = static_cast<uint32_t>(size(InPreAtts)), .pInputAttachments = data(InPreAtts),
+				.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
+				.pDepthStencilAttachment = nullptr,
+				.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
+			}),
+		}, {});
+}
+
 //!< レンダーパスでのクリア、画面全体を描画しないような背景色でのクリアが必要なもので使用する
 void VKExt::CreateRenderPass_Clear()
 {
-	constexpr std::array<VkAttachmentReference, 0> IAs = {};
-	constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	constexpr std::array<uint32_t, 0> PAs = {};
+	constexpr std::array<VkAttachmentReference, 0> InpAtts = {};
+	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	constexpr std::array<uint32_t, 0> PreAtts = {};
 
 	VK::CreateRenderPass(RenderPasses.emplace_back(), {
 		VkAttachmentDescription({
@@ -21,31 +52,32 @@ void VKExt::CreateRenderPass_Clear()
 		VkSubpassDescription({
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = static_cast<uint32_t>(size(IAs)), .pInputAttachments = data(IAs), 									
-			.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = data(RAs),	
+			.inputAttachmentCount = static_cast<uint32_t>(size(InpAtts)), .pInputAttachments = data(InpAtts),
+			.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
 			.pDepthStencilAttachment = nullptr,																							
-			.preserveAttachmentCount = static_cast<uint32_t>(size(PAs)), .pPreserveAttachments = data(PAs)								
+			.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
 		}),
 	}, {});
 }
 //!< 深度対応レンダーパス、深度が必要なもので使用する
 void VKExt::CreateRenderPass_Depth()
 {
-	constexpr std::array<VkAttachmentReference, 0> IAs = {};
-	constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	constexpr auto DA = VkAttachmentReference({ .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
-	constexpr std::array<uint32_t, 0> PAs = {};
+	constexpr std::array<VkAttachmentReference, 0> InoAtts = {};
+	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	constexpr auto DepAtt = VkAttachmentReference({ .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }); //!< デプスアタッチメントを使用
+	constexpr std::array<uint32_t, 0> PreAtts = {};
 
 	VK::CreateRenderPass(RenderPasses.emplace_back(), {
 		VkAttachmentDescription({
 			.flags = 0,
 			.format = ColorFormat,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //!< 「開始時にクリア」「終了時に保存」
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		}),
+		//!< デプスアタッチメントを使用
 		VkAttachmentDescription({
 			.flags = 0,
 			.format = DepthFormat,
@@ -58,10 +90,10 @@ void VKExt::CreateRenderPass_Depth()
 		VkSubpassDescription({
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = static_cast<uint32_t>(size(IAs)), .pInputAttachments = data(IAs),
-			.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = data(RAs),
-			.pDepthStencilAttachment = &DA,
-			.preserveAttachmentCount = static_cast<uint32_t>(size(PAs)), .pPreserveAttachments = data(PAs)
+			.inputAttachmentCount = static_cast<uint32_t>(size(InoAtts)), .pInputAttachments = data(InoAtts),
+			.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
+			.pDepthStencilAttachment = &DepAtt, //!< デプスアタッチメントを使用
+			.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
 		}),
 	},
 	{});

@@ -39,7 +39,7 @@ protected:
 		}
 
 #pragma region FRAME_OBJECT
-		CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
+		CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {

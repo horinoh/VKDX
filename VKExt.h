@@ -27,6 +27,7 @@ protected:
 	}
 #endif
 
+	void CreateRenderPass_None();
 	void CreateRenderPass_Clear();
 	void CreateRenderPass_Depth();
 

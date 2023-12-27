@@ -125,9 +125,9 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		}
 	} SetTimer(hWnd, IDT_TIMER1, DeltaMsec, nullptr);
 }
-void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
+void DX::OnPreDestroy()
 {
-	Super::OnPreDestroy(hWnd, hInstance);
+	Super::OnPreDestroy();
 
 	//!< フルスクリーンの場合は解除
 	DXGI_SWAP_CHAIN_DESC1 SCD1;
@@ -266,15 +266,6 @@ void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* De
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
 }
 
-void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range)
-{
-	if (nullptr != Resource && Size && nullptr != Source) [[likely]] {
-		BYTE* Data;
-		VERIFY_SUCCEEDED(Resource->Map(0, Range, reinterpret_cast<void**>(&Data))); {
-			memcpy(Data, Source, Size);
-		} Resource->Unmap(0, nullptr);
-	}
-}
 //void DX::PopulateCopyBufferRegionCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 //{
 //	{

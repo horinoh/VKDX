@@ -196,7 +196,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 #pragma region Code
 		if (nullptr != Inst) {
-			Inst->OnPreDestroy(hWnd, hInst);
+			Inst->OnPreDestroy();
 			Inst->OnDestroy(hWnd, hInst);
 		}
 		SAFE_DELETE(Inst);

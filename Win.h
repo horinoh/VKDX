@@ -153,7 +153,8 @@ public:
 			break;
 		}
 	}
-	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
+	//!< ‰ð•ú‘O‚ÉAI—¹‚ð‘Ò‚½‚È‚­‚Ä‚Í‚È‚ç‚È‚¢‚à‚Ì‚ð‘Ò‚Â
+	virtual void OnPreDestroy() {}
 	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 
 #pragma region BORDERLESS

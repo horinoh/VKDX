@@ -32,7 +32,7 @@ protected:
 		}
 #endif
 #pragma region UB
-		CopyToHostVisibleDeviceMemory(UniformBuffers[Index].DeviceMemory, 0, sizeof(Tracking), &Tracking);
+		CopyToHostVisibleDeviceMemory(Device, UniformBuffers[Index].DeviceMemory, 0, sizeof(Tracking), &Tracking);
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {

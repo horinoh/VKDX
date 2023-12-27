@@ -402,7 +402,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Transform), &Transform);
+			CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Transform), &Transform);
 		}
 #pragma endregion
 	}

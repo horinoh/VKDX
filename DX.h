@@ -385,7 +385,7 @@ public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
-	virtual void OnPreDestroy(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnPreDestroy() override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override { Super::OnDestroy(hWnd, hInstance); }
 
 	[[nodiscard]] static const char* GetFormatChar(const DXGI_FORMAT Format);
@@ -430,7 +430,14 @@ protected:
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizeInBytes, const UINT64 TotalBytes);
 	static void CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
 	static void CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const D3D12_CLEAR_VALUE& CV, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
-	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
+	static void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr) {
+		if (nullptr != Resource && Size && nullptr != Source) [[likely]] {
+			BYTE* Data;
+			VERIFY_SUCCEEDED(Resource->Map(0, Range, reinterpret_cast<void**>(&Data))); {
+				memcpy(Data, Source, Size);
+			} Resource->Unmap(0, nullptr);
+		}
+	}
 
 public:
 #pragma region COMMAND
