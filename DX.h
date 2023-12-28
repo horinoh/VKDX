@@ -514,7 +514,11 @@ public:
 
 	virtual void CreateCommandQueue();
 
-	virtual void CreateFence();
+	virtual void CreateFence() {
+		VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(GraphicsFence)));
+		VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(ComputeFence)));
+		LOG_OK();
+	}
 
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void GetSwapChainResource();

@@ -638,7 +638,26 @@ protected:
 	virtual void SelectPhysicalDevice(VkInstance Instance);
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
 
-	virtual void CreateFence(VkDevice Dev);
+	virtual void CreateFence(VkDevice Dev) {
+		//!< ホストとデバイスの同期 (Synchronization between host and device)
+		//!< サブミット(vkQueueSubmit) に使用し、Draw()やDispatch()の頭でシグナル(サブミットされたコマンドの完了)を待つ (Used when submit, and wait signal on top of Draw())
+		//!< 初回と２回目以降を同じに扱う為に、シグナル済み状態(VK_FENCE_CREATE_SIGNALED_BIT)で作成している (Create with signaled state, to do same operation on first time and second time)
+		constexpr VkFenceCreateInfo FCI = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
+		VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &GraphicsFence));
+		VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &ComputeFence));
+		LOG_OK();
+	}
+	virtual void CreateSemaphore(VkDevice Dev) {
+		//!< キューの同期(異なるキュー間の同期も可能) (Synchronization internal queue)
+		//!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
+		constexpr VkSemaphoreCreateInfo SCI = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = nullptr, .flags = 0 };
+		//!< プレゼント完了同期用 (Wait for presentation finish)
+		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
+		//!< 描画完了同期用 (Wait for render finish)
+		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphore));
+		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &ComputeSemaphore));
+		LOG_OK();
+	}
 
 	virtual void AllocatePrimaryCommandBuffer();
 	virtual void AllocateSecondaryCommandBuffer();

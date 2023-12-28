@@ -14,11 +14,15 @@ public:
 	virtual ~ClearVK() {}
 
 #ifdef USE_MANUAL_CLEAR
-	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
+	virtual void CreateSwapchain() override {
+		VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); 
+		GetSwapchainImages();
+	}
 #else
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 #endif
 	virtual void PopulateCommandBuffer(const size_t i) override {
+#ifdef USE_MANUAL_CLEAR
 		const auto CB = CommandBuffers[i];
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -29,13 +33,15 @@ public:
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-#ifdef USE_MANUAL_CLEAR
+
 			const auto Image = SwapchainImages[i];
 			constexpr VkImageSubresourceRange ISR = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
 				.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
 			};
+
+			//!< バリア (描き込み先へ)
 			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
 			constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
 			{
@@ -56,10 +62,11 @@ public:
 					static_cast<uint32_t>(size(IMBs)), data(IMBs));
 			}
 
+			//!< カラーでクリア、レンダーパス内では使用できない (Cannot be used in renderpass)
 			constexpr std::array ISRs = { ISR };
-			//!< レンダーパス内では使用できない (Cannot be used in renderpass)
 			vkCmdClearColorImage(CB, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::Blue, static_cast<uint32_t>(size(ISRs)), data(ISRs));
 
+			//!< バリア (プレゼント元へ)
 			{
 				const std::array IMBs = {
 					VkImageMemoryBarrier({
@@ -77,20 +84,10 @@ public:
 					static_cast<uint32_t>(size(BMBs)), data(BMBs),
 					static_cast<uint32_t>(size(IMBs)), data(IMBs));
 			}
-#else
-			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
-			const VkRenderPassBeginInfo RPBI = {
-				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				.pNext = nullptr,
-				.renderPass = RenderPasses[0],
-				.framebuffer = Framebuffers[i],
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }), 
-				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
-			};
-			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-			} vkCmdEndRenderPass(CB);
-#endif
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+#else
+		PopulateCommandBuffer_Clear(i, Colors::SkyBlue);
+#endif
 	}
 };
 #pragma endregion

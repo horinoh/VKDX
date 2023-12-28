@@ -41,6 +41,31 @@ protected:
 
 	void CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
 	void CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs);
+
+	void PopulateCommandBuffer_Clear(const size_t i, const VkClearColorValue& Color) {
+		const auto CB = CommandBuffers[i];
+		constexpr VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+			const std::array CVs = { VkClearValue({.color = Color }) };
+			const VkRenderPassBeginInfo RPBI = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RenderPasses[0],
+				.framebuffer = Framebuffers[i],
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+			};
+			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+			} vkCmdEndRenderPass(CB);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	}
 };
 
 class VKExtDepth : public VKExt

@@ -21,6 +21,22 @@ public:
 
 	void CreatePipelineState_MsPs(const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_AsMsPs(DepthEnable, { NullSBC, SBCs[0], SBCs[1] }); }
 	void CreatePipelineState_AsMsPs(const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs);
+
+	void PopulateCommandList_Clear(const size_t i, const DirectX::XMVECTORF32& Color) {
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			{
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
+				CL->ClearRenderTargetView(SwapChainCPUHandles[i], Color, static_cast<UINT>(size(Rects)), data(Rects));
+			}
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		} VERIFY_SUCCEEDED(CL->Close());
+	}
 };
 
 class DXExtDepth : public DXExt
