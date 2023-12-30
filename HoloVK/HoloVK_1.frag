@@ -41,6 +41,9 @@ vec2 TexArr(const vec3 UVZ) {
 
 void main()
 {
+#if 0
+	OutColor = texture(Sampler2D, InTexcoord);
+#else
 	//float Invert = 1.0f;
 	//if (1 == InvView + QuiltInvert) { Invert = -1.0f; }
 
@@ -67,4 +70,5 @@ void main()
 		rgb[i] = texture(Sampler2D, TexArr(nuv));
 	}
 	OutColor = vec4(rgb[HoloDraw.Ri].r, rgb[1].g, rgb[HoloDraw.Bi].b, 1.0f);
+#endif
 }

@@ -39,6 +39,9 @@ float2 TexArr(const float3 UVZ) {
 
 float4 main(IN In) : SV_TARGET
 {
+#if 0
+	return Texture.Sample(Sampler, In.Texcoord);
+#else
 	//float Invert = 1.0f;
 	//if (1 == InvView + QuiltInvert) { Invert = -1.0f; }
 
@@ -65,4 +68,5 @@ float4 main(IN In) : SV_TARGET
 		rgb[i] = Texture.Sample(Sampler, TexArr(nuv));
 	}
 	return float4(rgb[HoloDraw.Ri].r, rgb[1].g, rgb[HoloDraw.Bi].b, 1.0f);
+#endif
 }

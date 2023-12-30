@@ -24,6 +24,20 @@ public:
 	[[nodiscard]] static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzleType) { 
 		return VkComponentMapping({ .r = ToVkComponentSwizzle(GLISwizzleType.r), .g = ToVkComponentSwizzle(GLISwizzleType.g), .b = ToVkComponentSwizzle(GLISwizzleType.b), .a = ToVkComponentSwizzle(GLISwizzleType.a) });
 	}
+	static void GetPhysicalDeviceImageFormatProperties(VkImageFormatProperties& IFP, const VkPhysicalDevice& Dev, const gli::texture& GLI) {
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(Dev,
+			VKImage::ToVkFormat(GLI.format()),
+			VKImage::ToVkImageType(GLI.target()),
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			gli::is_target_cube(GLI.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+			&IFP));
+		OutputDebugStringA(data(std::format("maxExtent = {} x {} x {}\n", IFP.maxExtent.width, IFP.maxExtent.height, IFP.maxExtent.depth)));
+		OutputDebugStringA(data(std::format("maxMipLevels = {}\n", IFP.maxMipLevels)));
+		OutputDebugStringA(data(std::format("maxArrayLayers = {}\n", IFP.maxArrayLayers)));
+		OutputDebugStringA(data(std::format("sampleCounts = {}\n", IFP.sampleCounts)));
+		OutputDebugStringA(data(std::format("maxResourceSize = {}\n", IFP.maxResourceSize)));
+	}
 	//static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GliTexture) {
 	//	const auto Layers = static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces());
 	//	const auto Levels = static_cast<const uint32_t>(GliTexture.levels());
@@ -55,7 +69,6 @@ public:
 			if (IsDDS(Path) || IsKTX(Path)) {
 				GliTexture = gli::load(data(Path.string()));
 				assert(!GliTexture.empty() && "Load image failed");
-
 				const auto Format = ToVkFormat(GliTexture.format());
 				VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP,
 					gli::is_target_cube(GliTexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
@@ -109,8 +122,11 @@ public:
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(Queue, CB);
 		}
+		void GetPhysicalDeviceImageFormatProperties(VkImageFormatProperties& IFP, const VkPhysicalDevice& PD) {
+			VKImage::GetPhysicalDeviceImageFormatProperties(IFP, PD, GliTexture);
+		}
 	};
-
+	
 protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		for (auto& i : GLITextures) { i.Destroy(Device); } GLITextures.clear();

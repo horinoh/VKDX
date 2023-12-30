@@ -20,24 +20,12 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-#ifdef _DEBUG
-		auto GLITexture = gli::load(data((DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").string()));
-		VkImageFormatProperties IFP;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
-			VKImage::ToVkFormat(GLITexture.format()),
-			VKImage::ToVkImageType(GLITexture.target()),
-			VK_IMAGE_TILING_OPTIMAL,
-			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-			&IFP));
-		std::cout << "maxExtent = " << IFP.maxExtent.width << " x " << IFP.maxExtent.height << " x " << IFP.maxExtent.depth << std::endl;
-		std::cout << "maxMipLevels = " << IFP.maxMipLevels << std::endl;
-		std::cout << "maxArrayLayers = " << IFP.maxArrayLayers << std::endl;
-		std::cout << "sampleCounts = " << IFP.sampleCounts << std::endl;
-		std::cout << "maxResourceSize = " << IFP.maxResourceSize << std::endl;
-#endif
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+#ifdef _DEBUG
+		VkImageFormatProperties IFP;
+		GLITextures.back().GetPhysicalDeviceImageFormatProperties(IFP, GetCurrentPhysicalDevice());
+#endif
 	}
 #ifdef USE_IMMUTABLE_SAMPLER
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
