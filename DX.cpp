@@ -2,7 +2,6 @@
 
 template<> const DirectX::XMFLOAT3 GetMin(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
 template<> const DirectX::XMFLOAT3 GetMax(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
-
 template<>
 void AdjustScale(std::vector<DirectX::XMFLOAT3>& Vertices, const float Scale)
 {
@@ -752,11 +751,12 @@ void DX::CreateDirectCommandList()
 	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
 
+	const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		//!< パイプラインステートは後からでも指定できる GCL->Reset(CA, COM_PTR_GET(PS)) ので、ここでは nullptr を指定
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(DirectCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, DCA, nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());
 	}
 }
@@ -764,10 +764,11 @@ void DX::CreateBundleCommandList()
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
 
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, BCA, nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
 	}
 }

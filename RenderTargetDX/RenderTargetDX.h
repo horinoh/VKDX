@@ -25,10 +25,11 @@ protected:
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 #pragma region PASS1
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, BCA, nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
 		}
 #pragma endregion
@@ -42,22 +43,22 @@ protected:
 #pragma region PASS0
 		//!< メッシュ描画用
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
-		UploadResource Upload_Indirect0;
-		Upload_Indirect0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+		UploadResource Upload0;
+		Upload0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 #pragma endregion
 
 #pragma region PASS1
 		//!< フルスクリーン描画用
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
-		UploadResource Upload_Indirect1;
-		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
+		UploadResource Upload1;
+		Upload1.Create(COM_PTR_GET(Device), sizeof(DA), &DA);
 #pragma endregion
 
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
-			IndirectBuffers[1].PopulateCopyCommand(CL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
+			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload0.Resource));
+			IndirectBuffers[1].PopulateCopyCommand(CL, sizeof(DA), COM_PTR_GET(Upload1.Resource));
 		} VERIFY_SUCCEEDED(CL->Close());
 		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 	}
@@ -71,16 +72,7 @@ protected:
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1
-		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-		}));
+		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 #pragma endregion
 	}
 	virtual void CreateRootSignature() override {

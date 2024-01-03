@@ -33,7 +33,7 @@ static const int QuiltInvert = 0;
 float2 TexArr(const float3 UVZ) {
 	const float z = floor(UVZ.z * HoloDraw.Tile.z);
 	const float x = (fmod(z, HoloDraw.Tile.x) + UVZ.x) / HoloDraw.Tile.x;
-	const float y = (floor(z / HoloDraw.Tile.x) + UVZ.y) / HoloDraw.Tile.y;
+	const float y = -sign(HoloDraw.Tilt) * (floor(z / HoloDraw.Tile.x) + UVZ.y) / HoloDraw.Tile.y;
 	return float2(x, y) * ViewPortion.xy;
 }
 

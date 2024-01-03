@@ -155,6 +155,7 @@ public:
 			{
 				HoloDraw.Pitch = hpc_GetDevicePropertyPitch(DeviceIndex);
 				HoloDraw.Tilt = hpc_GetDevicePropertyTilt(DeviceIndex);
+				HoloDraw.Tilt = abs(HoloDraw.Tilt);
 				HoloDraw.Center = hpc_GetDevicePropertyCenter(DeviceIndex);
 				HoloDraw.InvView = hpc_GetDevicePropertyInvView(DeviceIndex);
 				HoloDraw.Subp = hpc_GetDevicePropertySubp(DeviceIndex);

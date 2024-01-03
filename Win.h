@@ -120,8 +120,7 @@ const auto GLTF_SAMPLE_PATH = std::filesystem::path("..") / "glTF-Sample-Models"
 
 template<typename T> const T GetMin(const T& lhs, const T& rhs);
 template<typename T> const T GetMax(const T& lhs, const T& rhs);
-
-template<typename T> void AdjustScale(std::vector<T>& Vertices, const float Scale);
+template<typename T> void AdjustScale(std::vector<T>&Vertices, const float Scale);
 
 class Win
 {

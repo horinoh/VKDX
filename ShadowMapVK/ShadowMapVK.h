@@ -164,20 +164,7 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ
 		//!< シェーダ内で sampler2DShadow を使用する場合は、比較方法(compareEnable=VK_TRUE, VK_COMPARE_OP_...)を指定すること
-		const VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_TRUE, .compareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+		CreateImmutableSampler_LinearRepeat();
 	}
 	virtual void CreatePipelineLayout() override {
 		//!< パス0 : パイプラインレイアウト

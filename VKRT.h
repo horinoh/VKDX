@@ -64,6 +64,7 @@ protected:
 	virtual void CreateSwapchain() override {
 		//!< 最後にコピーするため VK_IMAGE_USAGE_TRANSFER_DST_BIT が必要
 		VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+		VK::GetSwapchainImages();
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }

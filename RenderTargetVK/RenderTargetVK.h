@@ -26,18 +26,19 @@ protected:
 		Super::AllocateCommandBuffer();
 
 #pragma region PASS1
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+		const auto SCP = SecondaryCommandPools[0];
+		const auto Count = static_cast<uint32_t>(size(SwapchainImages));
 		assert(!empty(SecondaryCommandPools) && "");
-		const auto PrevCount = size(SecondaryCommandBuffers);
-		SecondaryCommandBuffers.resize(PrevCount + SCCount);
+		const auto Prev = size(SecondaryCommandBuffers);
+		SecondaryCommandBuffers.resize(Prev + Count);
 		const VkCommandBufferAllocateInfo CBAI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			.pNext = nullptr,
-			.commandPool = SecondaryCommandPools[0],
+			.commandPool = SCP,
 			.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			.commandBufferCount = SCCount
+			.commandBufferCount = Count
 		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[Prev]));
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
@@ -47,23 +48,23 @@ protected:
 #pragma region PASS0
 		//!< メッシュ描画用
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
-		VK::Scoped<StagingBuffer> Staging_Indirect0(Device);
-		Staging_Indirect0.Create(Device, PDMP, sizeof(DIIC), &DIIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+		VK::Scoped<StagingBuffer> Staging0(Device);
+		Staging0.Create(Device, PDMP, sizeof(DIIC), &DIIC);
 #pragma endregion
 
 #pragma region PASS1
 		//!< レンダーテクスチャ描画用
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC);
-		VK::Scoped<StagingBuffer> Staging_Indirect1(Device);
-		Staging_Indirect1.Create(Device, PDMP, sizeof(DIC), &DIC); 
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
+		VK::Scoped<StagingBuffer> Staging1(Device);
+		Staging1.Create(Device, PDMP, sizeof(DIC), &DIC); 
 #pragma endregion
 
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			IndirectBuffers[0].PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect0.Buffer);
-			IndirectBuffers[1].PopulateCopyCommand(CB, sizeof(DIC), Staging_Indirect1.Buffer);
+			IndirectBuffers[0].PopulateCopyCommand(CB, sizeof(DIIC), Staging0.Buffer);
+			IndirectBuffers[1].PopulateCopyCommand(CB, sizeof(DIC), Staging1.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
@@ -76,20 +77,7 @@ protected:
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
-		constexpr VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+		CreateImmutableSampler_LinearRepeat();
 #pragma endregion
 	}
 	virtual void CreatePipelineLayout() override {

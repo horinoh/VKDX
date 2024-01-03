@@ -73,20 +73,7 @@ protected:
 		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
-		constexpr VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+		CreateImmutableSampler_LinearRepeat();
 	}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };

@@ -67,16 +67,7 @@ protected:
 	virtual void CreateStaticSampler() override {
 		//!< https://developer.leapmotion.com/documentation/v4/images.html
 		//!< フィルタを LINEAR、ラップモードを CLAMP
-		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-		}));
+		CreateStaticSampler_LinearClamp(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
