@@ -152,7 +152,7 @@ protected:
 	virtual void CreateTexture()
 	{
 		//!< パス0
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(ShadowMapExtentW), static_cast<UINT>(ShadowMapExtentH), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		CreateTexture_Depth(static_cast<UINT64>(ShadowMapExtentW), static_cast<UINT>(ShadowMapExtentH));
 		//!< フォーマットを_TYPELESSにしなくてはならない
 		//!< DXGI_FORMAT_D24_UNORM_S8_UINT -> DXGI_FORMAT_R24_UNORM_X8_TYPELESS : 基本的に D -> R, UINT -> TYPELESS のように置換したフォーマットを指定
 		//DepthTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({

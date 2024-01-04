@@ -11,12 +11,26 @@ public:
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 	using Vertex_PositionNormal = struct Vertex_PositionNormal { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT3 Normal; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { DirectX::XMFLOAT2 Offset; };
+	
+	void CreateTexture_Depth(const UINT64 Width, const UINT Height) {
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), Width, Height, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+	}
+	void CreateTexture_Depth() {
+		CreateTexture_Depth(static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()));
+	}
+	void CreateTexture_Render(const UINT64 Width, const UINT Height) {
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), Width, Height, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
+	}
+	void CreateTexture_Render() {
+		CreateTexture_Render(static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()));
+	}
 
 	void CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs);
 	void CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_VsPs_Input(PTT, RD, DepthEnable, {}, SBCs); }
-	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs) { CreatePipelineState_VsPsDsHsGs_Input(PTT, RD, DepthEnable, {}, SBCs); }
 	void CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs);
-	//void CreatePipelineState_VsGsPs();
+	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs) { CreatePipelineState_VsPsDsHsGs_Input(PTT, RD, DepthEnable, {}, SBCs); }
+	void CreatePipelineState_VsGsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs);
+	void CreatePipelineState_VsGsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs) { CreatePipelineState_VsGsPs_Input(PTT, RD, DepthEnable, {}, SBCs); }
 	//void CreatePipelineState_VsPsDsHs();
 
 	void CreatePipelineState_MsPs(const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_AsMsPs(DepthEnable, { NullSBC, SBCs[0], SBCs[1] }); }
@@ -56,7 +70,7 @@ public:
 			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
-			}));
+		}));
 	}
 	void CreateStaticSampler_PointClamp(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -68,7 +82,7 @@ public:
 			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
-			}));
+		}));
 	}
 	void PopulateCommandList_Clear(const size_t i, const DirectX::XMVECTORF32& Color) {
 		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
@@ -93,7 +107,7 @@ private:
 	using Super = DXExt;
 protected:
 	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		CreateTexture_Depth();
 	}
 	//!< パイプラインステートを深度を有効にして作成すること
 	//virtual void CreatePipelineState() override {

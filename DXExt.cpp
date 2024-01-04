@@ -76,6 +76,40 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 	for (auto& i : Threads) { i.join(); }
 }
 
+void DXExt::CreatePipelineState_VsGsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
+{
+	const std::vector RTBDs = {
+		D3D12_RENDER_TARGET_BLEND_DESC({
+			.BlendEnable = FALSE, .LogicOpEnable = FALSE,
+			.SrcBlend = D3D12_BLEND_ONE, .DestBlend = D3D12_BLEND_ZERO, .BlendOp = D3D12_BLEND_OP_ADD,
+			.SrcBlendAlpha = D3D12_BLEND_ONE, .DestBlendAlpha = D3D12_BLEND_ZERO, .BlendOpAlpha = D3D12_BLEND_OP_ADD,
+			.LogicOp = D3D12_LOGIC_OP_NOOP,
+			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+		}),
+	};
+	constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
+		.StencilFailOp = D3D12_STENCIL_OP_KEEP,
+		.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+		.StencilPassOp = D3D12_STENCIL_OP_KEEP,
+		.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS
+	};
+	const D3D12_DEPTH_STENCIL_DESC DSD = {
+		.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		.FrontFace = DSOD, .BackFace = DSOD
+	};
+	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+
+	std::vector<std::thread> Threads;
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, &PLS, TEXT("0")));
+#else
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, nullptr, nullptr));
+#endif	
+	for (auto& i : Threads) { i.join(); }
+}
+
 void DXExt::CreatePipelineState_AsMsPs(const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
 {
 	const std::vector RTBDs = {

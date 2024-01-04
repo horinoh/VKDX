@@ -495,7 +495,7 @@ protected:
 			}, {});
 	}
 	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		CreateTexture_Depth();
 	}
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];

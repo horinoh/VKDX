@@ -157,9 +157,8 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		//!< パス0
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = ShadowMapExtent.width, .height = ShadowMapExtent.height, .depth = 1 }));
+		CreateTexture_Depth(ShadowMapExtent.width, ShadowMapExtent.height);
 	}
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ

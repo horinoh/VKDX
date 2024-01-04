@@ -27,6 +27,19 @@ protected:
 	}
 #endif
 
+	void CreateTexture_Depth(const uint32_t Width, const uint32_t Height) {
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
+	}
+	void CreateTexture_Depth() {
+		CreateTexture_Depth(SurfaceExtent2D.width, SurfaceExtent2D.height);
+	}
+	void CreateTexture_Render(const uint32_t Width, const uint32_t Height) {
+		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
+	}
+	void CreateTexture_Render() {
+		CreateTexture_Render(SurfaceExtent2D.width, SurfaceExtent2D.height);
+	}
+
 	void CreateRenderPass_None();
 	void CreateRenderPass_Clear();
 	void CreateRenderPass_Depth();
@@ -34,13 +47,25 @@ protected:
 	//!< 引数のシェーダの順序は D3D12_GRAPHICS_PIPELINE_STATE_DESC 内の VS, PS, DS, HS, GS に合わせて、VS, FS, TES, TCS, GS にしておくことにする
 	void CreatePipeline_VsFs_Input(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs);
 	void CreatePipeline_VsFs(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_VsFs_Input(PT, PatchControlPoints, PRSCI, DepthEnable, {}, {}, PSSCIs); }
-	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 5>& PSSCIs) { CreatePipeline_VsFsTesTcsGs_Input(PT, PatchControlPoints, PRSCI, DepthEnable, {}, {}, PSSCIs); }
 	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const std::array<VkPipelineShaderStageCreateInfo, 5>& PSSCIs);
-	//void CreatePipelineState_VsGsFs();
+	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 5>& PSSCIs) { CreatePipeline_VsFsTesTcsGs_Input(PT, PatchControlPoints, PRSCI, DepthEnable, {}, {}, PSSCIs); }
+	void CreatePipelineState_VsGsFs_Input(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs);
+	void CreatePipelineState_VsGsFs(const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs) { CreatePipelineState_VsGsFs_Input(PT, PatchControlPoints, PRSCI, DepthEnable, {}, {}, PSSCIs); }
 	//void CreatePipelineState_VsFsTesTcs();
 
 	void CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
 	void CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs);
+
+	void CreateFrameBuffer_Default() {
+		for (auto i : SwapchainImageViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		}
+	}
+	void CreateFrameBuffer_Depth() {
+		for (auto i : SwapchainImageViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures[0].View});
+		}
+	}
 
 	void CreateImmutableSampler_LinearRepeat() {
 		const VkSamplerCreateInfo SCI = {
@@ -139,19 +164,17 @@ private:
 	using Super = VKExt;
 protected:
 	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		CreateTexture_Depth();
 	}
 	virtual void CreateRenderPass() override { 
 		Super::CreateRenderPass_Depth(); 
 	}
 	//!< パイプラインを深度を有効にして作成すること
 	//virtual void CreatePipeline() override {
-	//	CreatePipeline_XXX(VK_TRUE, ...);
+	//	CreatePipeline_XXX(..., VK_TRUE, ...);
 	//}
 	virtual void CreateFramebuffer() override {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
+		CreateFrameBuffer_Depth();
 	}
 	//!< 深度クリアの設定をすること
 	//virtual void PopulateCommandBuffer(const size_t i) override {

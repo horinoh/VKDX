@@ -69,8 +69,7 @@ protected:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		CreateTexture_Render();
 #ifdef USE_DEPTH
 		Super::CreateTexture();
 #endif
@@ -425,7 +424,7 @@ protected:
 			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
 
 #pragma region PASS0
-			//!< メッシュ描画用
+			//!< メッシュ描画用セカンダリコマンドバッファを発行
 			{
 #ifdef USE_DEPTH
 				constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
@@ -471,7 +470,7 @@ protected:
 			}
 
 #pragma region PASS1
-			//!< レンダーテクスチャ描画用
+			//!< レンダーテクスチャ描画用セカンダリコマンドバッファを発行
 			{
 				constexpr std::array<VkClearValue, 0> CVs = {};
 				const VkRenderPassBeginInfo RPBI = {

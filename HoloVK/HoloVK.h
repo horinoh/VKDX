@@ -115,10 +115,8 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		const auto Extent = VkExtent3D({ .width = QuiltExtent2D.width, .height = QuiltExtent2D.height, .depth = 1 });
-		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, Extent);
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, Extent);
+		CreateTexture_Render(QuiltExtent2D.width, QuiltExtent2D.height);
+		CreateTexture_Depth(QuiltExtent2D.width, QuiltExtent2D.height);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1

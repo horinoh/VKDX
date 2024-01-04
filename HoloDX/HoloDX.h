@@ -113,8 +113,8 @@ protected:
 	}
 	virtual void CreateTexture()
 	{
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), QuiltWidth, QuiltHeight, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), QuiltWidth, QuiltHeight, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		CreateTexture_Render(QuiltWidth, QuiltHeight);
+		CreateTexture_Depth(QuiltWidth, QuiltHeight);
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1

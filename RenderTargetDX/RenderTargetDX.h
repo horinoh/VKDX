@@ -63,9 +63,7 @@ protected:
 		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreateTexture() {
-		const auto W = static_cast<UINT64>(GetClientRectWidth());
-		const auto H = static_cast<UINT>(GetClientRectHeight());
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
+		CreateTexture_Render();
 #ifdef USE_DEPTH
 		Super::CreateTexture();
 #endif
@@ -241,7 +239,7 @@ protected:
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 
 #pragma region PASS0
-		//!< バンドルコマンドリスト(メッシュ描画用
+		//!< バンドルコマンドリスト(メッシュ描画用)
 		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
 		VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
@@ -277,7 +275,7 @@ protected:
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 #pragma region PASS0
-			//!< メッシュ描画用
+			//!< メッシュ描画用バンドルコマンドリストを発行
 			{
 				const auto& HandleRTV = RtvDescs[0].second;
 				const auto& HandleDSV = DsvDescs[0].second;
@@ -320,7 +318,7 @@ protected:
 			}
 
 #pragma region PASS1
-			//!< レンダーテクスチャ描画用
+			//!< レンダーテクスチャ描画用バンドルコマンドリストを発行
 			{
 				const auto& Desc = CbvSrvUavDescs[0];
 				const auto& Heap = Desc.first;
