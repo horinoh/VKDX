@@ -32,6 +32,9 @@
 ### [テクスチャ](https://github.com/horinoh/VKDX/tree/master/DocTexture)
 
 ### [外部ライブラリ](https://github.com/horinoh/VKDX/tree/master/DocExternal)
+- GLTF, FBX, DRACO
+- DirectXMesh
+- LeapMotion
 
 ## VK
 

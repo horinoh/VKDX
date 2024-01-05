@@ -122,11 +122,12 @@ protected:
 	#endif
 		};
 		//!< offset, extent‚ÅŽw’è (left, top, right, bottom‚ÅŽw’è‚ÌDX‚Æ‚ÍˆÙ‚È‚é‚Ì‚Å’ˆÓ)
+		const auto Ext2D = VkExtent2D({ .width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) });
 		ScissorRects = {
-			VkRect2D({ VkOffset2D({.x = 0, .y = 0 }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
-			VkRect2D({ VkOffset2D({.x = static_cast<int32_t>(W), .y = 0 }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
-			VkRect2D({ VkOffset2D({.x = 0, .y = static_cast<int32_t>(H) }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
-			VkRect2D({ VkOffset2D({.x = static_cast<int32_t>(W), .y = static_cast<int32_t>(H) }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
+			VkRect2D({ VkOffset2D({.x = 0, .y = 0 }), Ext2D }),
+			VkRect2D({ VkOffset2D({.x = static_cast<int32_t>(W), .y = 0 }), Ext2D }),
+			VkRect2D({ VkOffset2D({.x = 0, .y = static_cast<int32_t>(H) }), Ext2D }),
+			VkRect2D({ VkOffset2D({.x = static_cast<int32_t>(W), .y = static_cast<int32_t>(H) }), Ext2D }),
 		};
 		LOG_OK();
 	}

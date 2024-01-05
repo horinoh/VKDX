@@ -88,7 +88,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 	* Leap.h USE_LEAP 定義を有効にする
  * [ドキュメント](https://developer.leapmotion.com/documentation/v4/index.html)
 
-## HoloPlay
+## HoloPlay -> Looking Glass プロジェクトへ移行予定
  * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
 	* HoloPlayStudio も必要に応じてインストールしておく
  * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
