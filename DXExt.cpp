@@ -76,7 +76,7 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_VsGsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
+void DXExt::CreatePipelineState_VsPsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
 {
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
