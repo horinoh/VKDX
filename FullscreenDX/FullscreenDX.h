@@ -41,7 +41,7 @@ protected:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, SBCs); 
+		CreatePipelineState_VsPs(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, SBCs);
 	}
 
 	virtual void PopulateCommandList(const size_t i) override {

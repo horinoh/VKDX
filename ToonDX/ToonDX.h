@@ -111,9 +111,9 @@ protected:
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
 #ifdef USE_DEPTH
-		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
+		CreatePipelineState_VsPsDsHsGs(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
 #else
-		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, FALSE, SBCs);
+		CreatePipelineState_VsPsDsHsGs(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, FALSE, SBCs);
 #endif
 	}
 	virtual void CreateDescriptor() override {

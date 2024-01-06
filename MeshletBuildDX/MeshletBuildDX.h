@@ -136,7 +136,7 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			CreatePipelineState_AsMsPs(TRUE, SBCs);
+			CreatePipelineState_AsMsPs(COM_PTR_GET(RootSignatures[0]), TRUE, SBCs);
 		}
 	}
 	virtual void CreateDescriptor() override {

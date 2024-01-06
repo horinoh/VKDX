@@ -141,7 +141,7 @@ public:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
+		DXExt::CreatePipelineState_VsPs_Input(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);

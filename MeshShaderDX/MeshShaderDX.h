@@ -33,7 +33,7 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 			};
-			CreatePipelineState_MsPs(FALSE, SBCs);
+			CreatePipelineState_MsPs(COM_PTR_GET(RootSignatures[0]), FALSE, SBCs);
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override {

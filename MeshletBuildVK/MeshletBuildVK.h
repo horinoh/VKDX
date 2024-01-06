@@ -163,7 +163,7 @@ public:
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_EXT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
 			};
-			CreatePipeline_TsMsFs(VK_TRUE, PSSCIs);
+			CreatePipeline_TsMsFs(PipelineLayouts[0], RenderPasses[0], VK_TRUE, PSSCIs);
 			for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 		}
 	}
