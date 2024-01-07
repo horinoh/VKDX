@@ -76,6 +76,8 @@ public:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
+		PipelineStates.emplace_back();
+
 		std::vector<COM_PTR<ID3DBlob>> SBs;
 		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
@@ -97,7 +99,10 @@ public:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		DXExt::CreatePipelineState_VsPs_Input(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
+		DXExt::CreatePipelineState_VsPs_Input(PipelineStates[0], COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
+
+		for (auto& i : Threads) { i.join(); }
+		Threads.clear();
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);

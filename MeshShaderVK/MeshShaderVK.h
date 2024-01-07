@@ -30,6 +30,8 @@ public:
 #endif
 	virtual void CreatePipeline() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+			Pipelines.emplace_back();
+
 			const std::array SMs = {
 #ifdef USE_NV_MESH_SHADER
 				VK::CreateShaderModule(GetFilePath("_nv.mesh.spv")),
@@ -46,7 +48,11 @@ public:
 #endif
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			};
-			CreatePipeline_MsFs(PipelineLayouts[0], RenderPasses[0], VK_FALSE, PSSCIs);
+			CreatePipeline_MsFs(Pipelines[0], PipelineLayouts[0], RenderPasses[0], VK_FALSE, PSSCIs);
+
+			for (auto& i : Threads) { i.join(); }
+			Threads.clear();
+
 			for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 		}
 	}

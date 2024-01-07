@@ -215,6 +215,9 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
+		PipelineStates.emplace_back();
+		PipelineStates.emplace_back();
+
 		std::vector<COM_PTR<ID3DBlob>> SBs;
 		//!< パス0 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
@@ -229,9 +232,6 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_1.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_1.gs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 #endif
-
-		PipelineStates.resize(2);
-		std::vector<std::thread> Threads;
 		const std::vector RTBDs = {
 			D3D12_RENDER_TARGET_BLEND_DESC({
 				.BlendEnable = FALSE, .LogicOpEnable = FALSE,
@@ -320,6 +320,7 @@ protected:
 #endif
 #endif	
 		for (auto& i : Threads) { i.join(); }
+		Threads.clear();
 	}
 	virtual void CreateDescriptor() override {
 		{

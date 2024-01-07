@@ -1,6 +1,6 @@
 #include "DXExt.h"
 
-void DXExt::CreatePipelineState_VsPs_Input(ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
+void DXExt::CreatePipelineState_VsPs_Input(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
 {
 	//!< ブレンド (Blend)
 	//!< 例) 
@@ -30,19 +30,17 @@ void DXExt::CreatePipelineState_VsPs_Input(ID3D12RootSignature* RS, const D3D12_
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	std::vector<std::thread> Threads;
 	//!< メンバ関数をスレッドで使用したい場合は、以下のようにthisを引数に取る形式を使用すればよい
 	//std::thread::thread(&DXExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), (GetTitleString() + ".plo"));
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, &PLS, TEXT("0")));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, &PLS, TEXT("0")));
 #else
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, nullptr, nullptr));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, nullptr, nullptr));
 #endif	
-	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_VsPsDsHsGs_Input(ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs)
+void DXExt::CreatePipelineState_VsPsDsHsGs_Input(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs)
 {
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
@@ -66,17 +64,15 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(ID3D12RootSignature* RS, const 
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, &PLS, TEXT("0")));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, &PLS, TEXT("0")));
 #else
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, nullptr, nullptr));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, nullptr, nullptr));
 #endif	
-	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_VsPsGs_Input(ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
+void DXExt::CreatePipelineState_VsPsGs_Input(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
 {
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
@@ -100,17 +96,15 @@ void DXExt::CreatePipelineState_VsPsGs_Input(ID3D12RootSignature* RS, const D3D1
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, &PLS, TEXT("0")));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, &PLS, TEXT("0")));
 #else
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, nullptr, nullptr));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateVsPsDsHsGs, std::ref(PST), COM_PTR_GET(Device), RS, Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, SBCs[2], IEDs, RTVs, nullptr, nullptr));
 #endif	
-	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_AsMsPs(ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
+void DXExt::CreatePipelineState_AsMsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs)
 {
 	const std::vector RTBDs = {
 	D3D12_RENDER_TARGET_BLEND_DESC({
@@ -143,12 +137,10 @@ void DXExt::CreatePipelineState_AsMsPs(ID3D12RootSignature* RS, const BOOL Depth
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateAsMsPs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, &PLS, TEXT("0")));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateAsMsPs, std::ref(PST), COM_PTR_GET(Device), RS, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, &PLS, TEXT("0")));
 #else
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateAsMsPs, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, nullptr, nullptr));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateAsMsPs, std::ref(PST), COM_PTR_GET(Device), RS, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, nullptr, nullptr));
 #endif	
-	for (auto& i : Threads) { i.join(); }
 }

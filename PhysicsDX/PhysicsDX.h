@@ -106,6 +106,8 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
+		PipelineStates.emplace_back();
+
 		std::vector<COM_PTR<ID3DBlob>> SBs;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
@@ -129,7 +131,10 @@ protected:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		CreatePipelineState_VsPsDsHsGs(COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
+		CreatePipelineState_VsPsDsHsGs(PipelineStates[0], COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
+
+		for (auto& i : Threads) { i.join(); }
+		Threads.clear();
 	}
 	virtual void CreateDescriptor() override {
 		auto& Desc = CbvSrvUavDescs.emplace_back();

@@ -71,6 +71,8 @@ public:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreatePipeline() override {
+		Pipelines.emplace_back();
+
 		const std::array SMs = {
 			//VK::CreateShaderModule(GetFilePath("_PN.vert.spv")),
 			//VK::CreateShaderModule(GetFilePath("_PN.frag.spv")),
@@ -101,7 +103,10 @@ public:
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 			.lineWidth = 1.0f
 		};
-		VKExt::CreatePipeline_VsFs_Input(PipelineLayouts[0], RenderPasses[0], Topology, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
+		VKExt::CreatePipeline_VsFs_Input(Pipelines[0], PipelineLayouts[0], RenderPasses[0], Topology, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
+
+		for (auto& i : Threads) { i.join(); }
+		Threads.clear();
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}

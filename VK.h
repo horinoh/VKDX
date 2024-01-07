@@ -784,7 +784,6 @@ protected:
 
 	[[nodiscard]] virtual VkShaderModule CreateShaderModule(const std::filesystem::path& Path) const;
 
-#ifdef USE_PIPELINE_SERIALIZE
 public:
 	struct PipelineCacheData
 	{
@@ -878,7 +877,7 @@ protected:
 		std::vector<VkPipelineCache> PipelineCaches;
 		bool IsLoaded = false;
 	};
-#endif
+
 	virtual void CreatePipeline() {}
 	//!< VS, FS, TES, TCS, GS
 	static void CreatePipelineVsFsTesTcsGs(VkPipeline& PL,
@@ -985,6 +984,8 @@ public:
 #endif
 
 protected:
+	std::vector<std::thread> Threads;
+
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef USE_DEBUG_UTILS
 	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;

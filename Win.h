@@ -35,7 +35,7 @@
 #define USE_SCREENSPACE_WIREFRAME //!< [ ToonDX, ToonVK ]
 #define USE_INDIRECT //!< [ FullscreenDX, FullscreenVK, RTTriangleDX, RTTriangleVK ]
 #define USE_DISTANCE_FUNCTION //!< [ FullscreenDX, FullscreenVK ]
-#define USE_PIPELINE_SERIALIZE //!< [ *DX, *VK ]
+//#define USE_PIPELINE_SERIALIZE //!< [ *DX, *VK ]
 //#define USE_PARALLAX_MAP //!< [ NormalMapDX, NormalMapVK ]
 //#define USE_SKY_DOME //!< [ CubeMapDX, CubeMapVK ]
 #define USE_GBUFFER_VISUALIZE //!< [ DeferredDX, DeferredVK ]

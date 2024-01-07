@@ -126,6 +126,8 @@ public:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
 	virtual void CreatePipelineState() override {
+		PipelineStates.emplace_back();
+
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			std::vector<COM_PTR<ID3DBlob>> SBs;
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".as.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
@@ -136,7 +138,10 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			CreatePipelineState_AsMsPs(COM_PTR_GET(RootSignatures[0]), TRUE, SBCs);
+			CreatePipelineState_AsMsPs(PipelineStates[0], COM_PTR_GET(RootSignatures[0]), TRUE, SBCs);
+
+			for (auto& i : Threads) { i.join(); }
+			Threads.clear();
 		}
 	}
 	virtual void CreateDescriptor() override {

@@ -554,7 +554,6 @@ public:
 	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);
 	virtual void GetBlobPart(ID3DBlob* Blob);
 	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
-#ifdef USE_PIPELINE_SERIALIZE
 	class PipelineLibrarySerializer
 	{
 	public:
@@ -600,7 +599,6 @@ public:
 		COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 		bool IsLoaded = false;
 	};
-#endif
 	virtual void CreatePipelineState() {}
 	//!< VS, PS, DS, HS, GS
 	static void CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
@@ -639,6 +637,8 @@ public:
 	virtual void Dispatch();
 	
 protected:
+	std::vector<std::thread> Threads;
+
 #if defined(_DEBUG) || defined(USE_PIX)
 	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif

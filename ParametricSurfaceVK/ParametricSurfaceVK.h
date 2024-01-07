@@ -28,6 +28,8 @@ protected:
 	} 
 	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override { 
+		Pipelines.emplace_back();
+
 		const std::array SMs = {
 			VK::CreateShaderModule(GetFilePath(".vert.spv")),
 			VK::CreateShaderModule(GetFilePath(".frag.spv")),
@@ -74,8 +76,11 @@ protected:
 			.lineWidth = 1.0f
 		};
 		//!< トポロジ (DX では PopulateCommandList 時に IASetPrimitiveTopology で指定している)
-		CreatePipeline_VsFsTesTcsGs(PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_FALSE, PSSCIs);
+		CreatePipeline_VsFsTesTcsGs(Pipelines[0], PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_FALSE, PSSCIs);
 		
+		for (auto& i : Threads) { i.join(); }
+		Threads.clear();
+
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 

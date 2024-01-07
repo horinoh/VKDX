@@ -25,6 +25,8 @@ public:
 	}
 	virtual void CreatePipelineState() override {
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
+			PipelineStates.emplace_back();
+
 			std::vector<COM_PTR<ID3DBlob>> SBs;
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".as.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".ms.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
@@ -34,7 +36,10 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			CreatePipelineState_AsMsPs(COM_PTR_GET(RootSignatures[0]), FALSE, SBCs);
+			CreatePipelineState_AsMsPs(PipelineStates[0], COM_PTR_GET(RootSignatures[0]), FALSE, SBCs);
+
+			for (auto& i : Threads) { i.join(); }
+			Threads.clear();
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override {
