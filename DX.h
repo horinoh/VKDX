@@ -411,7 +411,8 @@ public:
 #pragma endregion
 
 protected:
-	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
+	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL, 
+		ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
 		const std::array RBs = {
 			D3D12_RESOURCE_BARRIER({
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -425,7 +426,31 @@ protected:
 		};
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
-
+	static void ResourceBarrier2(ID3D12GraphicsCommandList* GCL,
+		ID3D12Resource* Resource0, const D3D12_RESOURCE_STATES Before0, const D3D12_RESOURCE_STATES After0,
+		ID3D12Resource* Resource1, const D3D12_RESOURCE_STATES Before1, const D3D12_RESOURCE_STATES After1) {
+		const std::array RBs = {
+			D3D12_RESOURCE_BARRIER({
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+					.pResource = Resource0,
+					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+					.StateBefore = Before0, .StateAfter = After0
+				})
+			}),
+			D3D12_RESOURCE_BARRIER({
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+					.pResource = Resource1,
+					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+					.StateBefore = Before1, .StateAfter = After1
+				})
+			})
+		};
+		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+	}
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_RESOURCE_FLAGS RF, const D3D12_HEAP_TYPE HT, const D3D12_RESOURCE_STATES RS, const void* Source = nullptr);
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizeInBytes, const UINT64 TotalBytes);
 	static void CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
@@ -625,6 +650,7 @@ public:
 	virtual void CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS);
 	virtual void CreateStaticSampler() {}
 
+	virtual void PopulateBundleCommandList([[maybe_unused]] const size_t i) {}
 	virtual void PopulateCommandList([[maybe_unused]] const size_t i) {}
 
 	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }

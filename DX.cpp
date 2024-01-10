@@ -120,6 +120,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		//!< ビューポートサイズが決定してから
 		LoadScene();
 		for (auto i = 0; i < size(DirectCommandLists); ++i) {
+			PopulateBundleCommandList(i);
 			PopulateCommandList(i);
 		}
 	} SetTimer(hWnd, IDT_TIMER1, DeltaMsec, nullptr);

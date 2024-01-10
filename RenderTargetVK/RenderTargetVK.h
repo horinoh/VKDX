@@ -309,7 +309,7 @@ protected:
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
 	
-	virtual void PopulateCommandBuffer(const size_t i) override {
+	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 #pragma region PASS0
 		//!< メッシュ描画用
 		const auto RP0 = RenderPasses[0];
@@ -339,7 +339,7 @@ protected:
 
 				vkCmdDrawIndirect(SCB0, IndirectBuffers[0].Buffer, 0, 1, 0);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
-		}
+	}
 #pragma endregion
 
 #pragma region PASS1
@@ -377,6 +377,16 @@ protected:
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 		}
 #pragma endregion
+	}
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto RP0 = RenderPasses[0];
+		const auto FB0 = Framebuffers[0];
+		const auto SCB0 = SecondaryCommandBuffers[i];
+
+		const auto RP1 = RenderPasses[1];
+		const auto FB1 = Framebuffers[i + 1];
+		const auto SCCount = size(SwapchainImages);
+		const auto SCB1 = SecondaryCommandBuffers[i + SCCount];
 
 #ifdef USE_SUBPASS
 		//vkCmdNextSubpass() を使用する
@@ -422,7 +432,7 @@ protected:
 					VkImageMemoryBarrier({
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 						.pNext = nullptr,
-						.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+						.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.image = RenderTextures[0].Image,

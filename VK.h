@@ -898,6 +898,7 @@ protected:
 		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
 		VkPipelineCache PC = VK_NULL_HANDLE);
 
+	virtual void PopulateSecondaryCommandBuffer([[maybe_unused]] const size_t i) {}
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
 
 	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }

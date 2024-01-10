@@ -203,7 +203,7 @@ protected:
 #pragma endregion
 	}
 
-	virtual void PopulateCommandList(const size_t i) override {
+	virtual void PopulateBundleCommandList(const size_t i) override {
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 
 #pragma region PASS0
@@ -231,16 +231,22 @@ protected:
 		}
 		VERIFY_SUCCEEDED(BCL1->Close());
 #pragma endregion
+	}
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		const auto BCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); 
 
-		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
-		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
+		const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
+		VERIFY_SUCCEEDED(DCL->Reset(DCA, nullptr));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			const auto RT = COM_PTR_GET(RenderTextures.back().Resource);
 
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 #pragma region PASS0
 			//!< メッシュ描画用バンドルコマンドリストを発行
@@ -248,42 +254,30 @@ protected:
 				const auto& HandleRTV = RtvDescs[0].second;
 				const auto& HandleDSV = DsvDescs[0].second;
 
-				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+				DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
-				CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
-
-				const std::array RTCHs = { HandleRTV[0] };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &HandleDSV[0]);
-#else			
-				const std::array RTCHs = { RtvCPUHandles[0] };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
+				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 
-				CL->ExecuteBundle(BCL0);
+				const std::array RTCHs = { HandleRTV[0] };
+#ifdef USE_DEPTH
+				DCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &HandleDSV[0]);
+#else			
+				DCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
+#endif
+
+				DCL->ExecuteBundle(BCL0);
 			}
 #pragma endregion
 
 			//!< リソースバリア
-			{
-				const std::array RBs = {
-					//!< PRESENT -> RENDER_TARGET
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
-					}),
-					//!< RENDER_TARGET -> PIXEL_SHADER_RESOURCE
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
-					}),
-				};
-				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
+			//!<	スワップチェインをレンダーターゲットへ、レンダーテクスチャをシェーダリソースへ
+			ResourceBarrier2(DCL,
+				SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET,
+				RT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 #pragma region PASS1
 			//!< レンダーテクスチャ描画用バンドルコマンドリストを発行
@@ -292,40 +286,27 @@ protected:
 				const auto& Heap = Desc.first;
 				const auto& Handle = Desc.second;
 
-				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+				DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				DCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				//!< SRV
-				CL->SetGraphicsRootDescriptorTable(0, Handle[0]); 
+				DCL->SetGraphicsRootDescriptorTable(0, Handle[0]); 
 
-				CL->ExecuteBundle(BCL1);
+				DCL->ExecuteBundle(BCL1);
 			}
 
-			//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
-			{
-				const std::array RBs = {
-					//!< RENDER_TARGET -> PRESENT
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PRESENT })
-					}),
-					//!< PIXEL_SHADER_RESOURCE -> RENDER_TARGET
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
-					}),
-				};
-				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
+			//!< リソースバリア
+			//!<	スワップチェインをプレゼントへ、レンダーテクスチャをレンダーターゲットへ
+			ResourceBarrier2(DCL,
+				SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT,
+				RT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 #pragma endregion
 		}
-		VERIFY_SUCCEEDED(CL->Close());
+		VERIFY_SUCCEEDED(DCL->Close());
 	}
 };
 #pragma endregion
