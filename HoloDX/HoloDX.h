@@ -380,7 +380,7 @@ protected:
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
 		{
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
 			const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
 
 #pragma region PASS0

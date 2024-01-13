@@ -156,10 +156,10 @@ protected:
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				const std::array CHs = { SwapChainCPUHandles[i] };
+				const std::array CHs = { SwapchainBackBuffers[i].Handle };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				const auto& DescSRV = CbvSrvUavDescs[0];

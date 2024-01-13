@@ -381,7 +381,7 @@ public:
 #else
 				vkCmdTraceRaysKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetClientRectWidth(), GetClientRectHeight(), 1);
 #endif
-			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+			} PopulateEndRenderTargetCommand(CB, RT, SwapchainBackBuffers[i].Image, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}

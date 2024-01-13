@@ -90,11 +90,11 @@ public:
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(SwapChainCPUHandles[i], Color, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(SwapchainBackBuffers[i].Handle, Color, static_cast<UINT>(size(Rects)), data(Rects));
 			}
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		} VERIFY_SUCCEEDED(CL->Close());

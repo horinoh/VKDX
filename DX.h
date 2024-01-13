@@ -26,6 +26,7 @@
 
 #include <initguid.h>
 #include <d3d12.h>
+#include <d3d12video.h>
 #include <d3dcompiler.h>
 #include <DXGI1_6.h>
 #include <DirectXMath.h>
@@ -552,7 +553,12 @@ public:
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
 	virtual void CreateDirectCommandList();
-	virtual void CreateBundleCommandList();
+	void CreateBundleCommandList(const UINT Count);
+	virtual void CreateBundleCommandList() {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		CreateBundleCommandList(SCD.BufferCount);
+	}
 	virtual void CreateComputeCommandList();
 	virtual void CreateCommandList() {
 		CreateDirectCommandList();
@@ -574,6 +580,8 @@ public:
 
 	virtual void CreateDescriptor() {}
 	virtual void CreateShaderTable() {}
+
+	virtual void CreateVideo();
 
 	virtual void ProcessShaderReflection(ID3DBlob* Blob);
 	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);
@@ -687,9 +695,13 @@ protected:
 	COM_PTR<ID3D12Fence> ComputeFence;
 
 	COM_PTR<IDXGISwapChain4> SwapChain;
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
-	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SwapChainCPUHandles;
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
+	struct SwapChainBackBuffer 
+	{
+		COM_PTR<ID3D12Resource> Resource;
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle;
+	}; 
+	std::vector<SwapChainBackBuffer> SwapchainBackBuffers;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> DirectCommandAllocators;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> DirectCommandLists;

@@ -49,7 +49,7 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -113,7 +113,7 @@ protected:
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			//!< UB * N
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }) 
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }) 
 #pragma endregion
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -124,7 +124,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
@@ -139,7 +139,7 @@ protected:
 		}, DescriptorSetLayouts[0]);
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DBI);
 		}

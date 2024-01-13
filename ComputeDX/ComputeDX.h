@@ -99,7 +99,7 @@ protected:
 			const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 			VERIFY_SUCCEEDED(DCL->Reset(DCA, PS)); {
 				PopulateBeginRenderTargetCommand(DCL, RT); {
-				} PopulateEndRenderTargetCommand(DCL, RT, COM_PTR_GET(SwapChainResources[i]));
+				} PopulateEndRenderTargetCommand(DCL, RT, COM_PTR_GET(SwapchainBackBuffers[i].Resource));
 			} VERIFY_SUCCEEDED(DCL->Close());
 		}
 	}

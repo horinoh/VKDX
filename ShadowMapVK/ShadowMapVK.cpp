@@ -287,7 +287,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用、シャドウレシーバ描画用)
 #pragma region FRAME_OBJECT
-	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+	const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
 #pragma endregion
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{

@@ -321,7 +321,7 @@ public:
 				});
 				CL4->DispatchRays(&DRD);
 #endif
-			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainResources[i]));
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapchainBackBuffers[i].Resource));
 		} VERIFY_SUCCEEDED(CL->Close());
 	}
 };

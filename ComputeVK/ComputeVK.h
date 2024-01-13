@@ -137,7 +137,7 @@ protected:
 			const auto RT = StorageTextures[0].Image;
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				PopulateBeginRenderTargetCommand(CB, RT); {
-				} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+				} PopulateEndRenderTargetCommand(CB, RT, SwapchainBackBuffers[i].Image, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		}
 	}

@@ -295,7 +295,7 @@ public:
 
 				const auto& SBT = ShaderBindingTables.back();
 				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
-			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+			} PopulateEndRenderTargetCommand(CB, RT, SwapchainBackBuffers[i].Image, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}

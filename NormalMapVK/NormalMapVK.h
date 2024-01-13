@@ -48,7 +48,7 @@ protected:
 
 		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) });
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -142,7 +142,7 @@ protected:
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }), //!< UB * N
 #pragma endregion
 #ifdef USE_SEPARATE_SAMPLER
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_SAMPLER, .descriptorCount = 1 }), //!< Sampler
@@ -159,7 +159,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < static_cast<uint32_t>(size(SwapchainImages)); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
@@ -209,7 +209,7 @@ protected:
 		}, DescriptorSetLayouts[0]);
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< UniformBuffer
 #ifdef USE_SEPARATE_SAMPLER

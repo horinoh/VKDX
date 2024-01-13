@@ -57,13 +57,13 @@ protected:
 	void CreatePipeline_MsFs(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(PL, PLL, RP, DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
 
 	void CreateFrameBuffer_Default() {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		for (const auto& i : SwapchainBackBuffers) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
 		}
 	}
 	void CreateFrameBuffer_Depth() {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures[0].View});
+		for (const auto& i : SwapchainBackBuffers) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView, DepthTextures[0].View});
 		}
 	}
 

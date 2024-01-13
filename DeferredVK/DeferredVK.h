@@ -28,7 +28,7 @@ protected:
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
 #pragma region PASS1 (Draw fullscreen)
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
@@ -88,7 +88,7 @@ protected:
 		Tr = Transform({ Projection, View, World, InverseViewProjection });
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -392,8 +392,8 @@ protected:
 
 #pragma region PASS1 (Draw fullscreen)
 		{
-			for (auto i : SwapchainImageViews) {
-				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+			for (const auto& i : SwapchainBackBuffers) {
+				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
 			}
 		}
 #pragma endregion
@@ -401,7 +401,7 @@ protected:
 	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) * 2 }), //!< UB * N * 2
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) * 2 }), //!< UB * N * 2
 #pragma endregion
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
@@ -419,7 +419,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -432,7 +432,7 @@ protected:
 					.offset = 0, .stride = sizeof(VkDescriptorBufferInfo)
 				}),
 				}, DescriptorSetLayouts[0]);
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 				const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DBI);
 			}
@@ -450,7 +450,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -508,7 +508,7 @@ protected:
 					.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 				}),
 				}, DescriptorSetLayouts[1]);
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 				const DescriptorUpdateInfo DUI = {
 					//!< レンダーターゲット : カラー(RenderTarget : Color)
 					VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
@@ -522,7 +522,7 @@ protected:
 #pragma endregion
 					VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 				};
-				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + size(SwapchainImages)], DUT, &DUI);
+				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + size(SwapchainBackBuffers)], DUT, &DUI);
 			}
 			vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 #pragma endregion
@@ -575,7 +575,7 @@ protected:
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
 #pragma endregion
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 		{

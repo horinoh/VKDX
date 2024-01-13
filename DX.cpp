@@ -79,6 +79,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateShaderTable();
 
+	CreateVideo();
+
 	OnExitSizeMove(hWnd, hInstance);
 }
 
@@ -445,15 +447,15 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 				switch (FDFL.MaxSupportedFeatureLevel) {
 				default: assert(0 && "Unknown FeatureLevel"); break;
 					D3D_FEATURE_LEVEL_ENTRY(12_2)
-					D3D_FEATURE_LEVEL_ENTRY(12_1)
-					D3D_FEATURE_LEVEL_ENTRY(12_0)
-					D3D_FEATURE_LEVEL_ENTRY(11_1)
-					D3D_FEATURE_LEVEL_ENTRY(11_0)
-					D3D_FEATURE_LEVEL_ENTRY(10_1)
-					D3D_FEATURE_LEVEL_ENTRY(10_0)
-					D3D_FEATURE_LEVEL_ENTRY(9_3)
-					D3D_FEATURE_LEVEL_ENTRY(9_2)
-					D3D_FEATURE_LEVEL_ENTRY(9_1)
+						D3D_FEATURE_LEVEL_ENTRY(12_1)
+						D3D_FEATURE_LEVEL_ENTRY(12_0)
+						D3D_FEATURE_LEVEL_ENTRY(11_1)
+						D3D_FEATURE_LEVEL_ENTRY(11_0)
+						D3D_FEATURE_LEVEL_ENTRY(10_1)
+						D3D_FEATURE_LEVEL_ENTRY(10_0)
+						D3D_FEATURE_LEVEL_ENTRY(9_3)
+						D3D_FEATURE_LEVEL_ENTRY(9_2)
+						D3D_FEATURE_LEVEL_ENTRY(9_1)
 				}
 #undef D3D_FEATURE_LEVEL_ENTRY
 				break;
@@ -694,8 +696,9 @@ void DX::GetSwapChainResource()
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		auto& SCBB = SwapchainBackBuffers.emplace_back();
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.emplace_back())));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SCBB.Resource)));
 
 		//!< デスクリプタ(ビュー)の作成
 #ifdef USE_GAMMA_CORRECTION
@@ -704,12 +707,12 @@ void DX::GetSwapChainResource()
 			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
 			.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
 		};
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), &RTVD, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(SCBB.Resource), &RTVD, CDH);
 #else
 		//!< タイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), nullptr, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(SCBB.Resource), nullptr, CDH);
 #endif
-		SwapChainCPUHandles.emplace_back(CDH);
+		SCBB.Handle = CDH;
 		CDH.ptr += IncSize;
 	}
 
@@ -725,8 +728,8 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
-	for (auto& i : SwapChainResources) { COM_PTR_RESET(i); }
-	SwapChainResources.clear();
+	for (auto& i : SwapchainBackBuffers) { COM_PTR_RESET(i.Resource); }
+	SwapchainBackBuffers.clear();
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
@@ -761,18 +764,28 @@ void DX::CreateDirectCommandList()
 		VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());
 	}
 }
-void DX::CreateBundleCommandList()
+void DX::CreateBundleCommandList(const UINT Count)
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
-	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+	for (UINT i = 0; i < Count; ++i) {
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, BCA, nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
 	}
 }
+//void DX::CreateBundleCommandList()
+//{
+//	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
+//
+//	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+//	DXGI_SWAP_CHAIN_DESC1 SCD;
+//	SwapChain->GetDesc1(&SCD);
+//	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+//		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, BCA, nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+//		VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
+//	}
+//}
 void DX::CreateComputeCommandList()
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_UUIDOF_PUTVOID(ComputeCommandAllocators.emplace_back())));
@@ -916,6 +929,133 @@ void DX::CreateRootSignature()
 #endif
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0/* マルチGPUの場合に使用(1つしか使わない場合は0で良い)*/, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	LOG_OK();
+}
+
+void DX::CreateVideo()
+{
+	COM_PTR<ID3D12VideoDevice> VideoDevice;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(VideoDevice)));
+
+	constexpr auto FrameRate30 = DXGI_RATIONAL({ .Numerator = 30, .Denominator = 1 });
+
+	//!< InputSample.Format 次第で上手くいかないので注意
+	auto FDVPS = D3D12_FEATURE_DATA_VIDEO_PROCESS_SUPPORT({
+		.NodeIndex = 0,
+		.InputSample = D3D12_VIDEO_SAMPLE({
+			.Width = 1024, .Height = 1024,
+			.Format = D3D12_VIDEO_FORMAT({.Format = DXGI_FORMAT_NV12, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 })
+		}),
+		.InputFieldType = D3D12_VIDEO_FIELD_TYPE_NONE,
+		.InputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
+		.InputFrameRate = FrameRate30,
+		.OutputFormat = D3D12_VIDEO_FORMAT({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 }),
+		.OutputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
+		.OutputFrameRate = FrameRate30,
+	});
+	VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_PROCESS_SUPPORT, reinterpret_cast<void*>(&FDVPS), sizeof(FDVPS)));
+
+	switch (FDVPS.SupportFlags)
+	{
+	case D3D12_VIDEO_PROCESS_SUPPORT_FLAG_NONE:
+	case D3D12_VIDEO_PROCESS_SUPPORT_FLAG_SUPPORTED:
+		break;
+	}
+
+	FDVPS.ScaleSupport.OutputSizeRange;
+	switch (FDVPS.ScaleSupport.Flags)
+	{
+	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_NONE:
+	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_POW2_ONLY:
+	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_EVEN_DIMENSIONS_ONLY:
+		break;
+	}
+
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_FILL) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_LUMA_KEY) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_STEREO) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ROTATION) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_FLIP) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_BLENDING) {}
+	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_PIXEL_ASPECT_RATIO) {}
+
+	if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_BOB) {}
+	if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_CUSTOM) {}
+
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DENOISE) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DERINGING) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_EDGE_ENHANCEMENT) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_COLOR_CORRECTION) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_FLESH_TONE_MAPPING) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_IMAGE_STABILIZATION) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_SUPER_RESOLUTION) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_ANAMORPHIC_SCALING) {}
+	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_CUSTOM) {}
+
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_BRIGHTNESS) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_CONTRAST) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_HUE) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_SATURATION) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_NOISE_REDUCTION) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_EDGE_ENHANCEMENT) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_ANAMORPHIC_SCALING) {}
+	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_STEREO_ADJUSTMENT) {}
+
+	FDVPS.FilterRangeSupport[0].Minimum;
+	FDVPS.FilterRangeSupport[0].Maximum;
+	FDVPS.FilterRangeSupport[0].Default;
+	FDVPS.FilterRangeSupport[0].Multiplier;
+
+	D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT FDVDPC = { .NodeIndex = 0 };
+	VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, reinterpret_cast<void*>(&FDVDPC), sizeof(FDVDPC)));
+	if (FDVDPC.ProfileCount) {
+		//std::array FDVDPs = {
+		//	D3D12_VIDEO_DECODE_PROFILE_MPEG2,
+		//	D3D12_VIDEO_DECODE_PROFILE_MPEG1_AND_MPEG2,
+		//	D3D12_VIDEO_DECODE_PROFILE_H264,
+		//	D3D12_VIDEO_DECODE_PROFILE_H264_STEREO_PROGRESSIVE,
+		//	D3D12_VIDEO_DECODE_PROFILE_H264_STEREO,
+		//	D3D12_VIDEO_DECODE_PROFILE_H264_MULTIVIEW,
+		//	D3D12_VIDEO_DECODE_PROFILE_VC1,
+		//	D3D12_VIDEO_DECODE_PROFILE_VC1_D2010,
+		//	D3D12_VIDEO_DECODE_PROFILE_MPEG4PT2_SIMPLE,
+		//	D3D12_VIDEO_DECODE_PROFILE_MPEG4PT2_ADVSIMPLE_NOGMC,
+		//	D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN,
+		//	D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN10,
+		//	D3D12_VIDEO_DECODE_PROFILE_VP9,
+		//	D3D12_VIDEO_DECODE_PROFILE_VP9_10BIT_PROFILE2,
+		//	D3D12_VIDEO_DECODE_PROFILE_VP8,
+		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE0,
+		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE1,
+		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE2,
+		//	D3D12_VIDEO_DECODE_PROFILE_AV1_12BIT_PROFILE2,
+		//	D3D12_VIDEO_DECODE_PROFILE_AV1_12BIT_PROFILE2_420,
+		//};
+		std::vector<GUID> FDVDPs(FDVDPC.ProfileCount);
+		auto FDVDP = D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES({
+			.NodeIndex = 0,
+			.ProfileCount = static_cast<UINT>(size(FDVDPs)),
+			.pProfiles = data(FDVDPs)
+		});
+		VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, reinterpret_cast<void*>(&FDVDP), sizeof(FDVDP)));
+		for (auto i : FDVDPs) {
+			auto FDVDS = D3D12_FEATURE_DATA_VIDEO_DECODE_SUPPORT({
+				.NodeIndex = 0,
+				.Configuration = D3D12_VIDEO_DECODE_CONFIGURATION({
+					.DecodeProfile = i,
+					.BitstreamEncryption = D3D12_BITSTREAM_ENCRYPTION_TYPE_NONE,
+					.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE
+				}),
+				.Width = 1024, .Height = 1024,
+				.DecodeFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.FrameRate = FrameRate30,
+				.BitRate = 0,
+				});
+			//auto HR = VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, reinterpret_cast<void*>(&FDVDS), sizeof(FDVDS));
+			//if (SUCCEEDED(HR)) {
+			//	std::cout << FDVDS.BitRate << std::endl;
+			//}
+		}
+	}
 }
 
 void DX::ProcessShaderReflection(ID3DBlob* Blob)

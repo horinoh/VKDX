@@ -69,12 +69,12 @@ protected:
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				const std::array RTDHs = { SwapChainCPUHandles[i] };
+				CL->ClearRenderTargetView(SwapchainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				const std::array RTDHs = { SwapchainBackBuffers[i].Handle };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 
 				CL->ExecuteBundle(BCL);

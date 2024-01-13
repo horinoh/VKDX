@@ -175,17 +175,17 @@ protected:
 			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
 			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(SwapchainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
 				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
-				const std::array CHs = { SwapChainCPUHandles[i] };
+				const std::array CHs = { SwapchainBackBuffers[i].Handle };
 #ifdef USE_DEPTH
 				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
 #else

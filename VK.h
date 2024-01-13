@@ -660,7 +660,10 @@ protected:
 	}
 
 	virtual void AllocatePrimaryCommandBuffer();
-	virtual void AllocateSecondaryCommandBuffer();
+	void AllocateSecondaryCommandBuffer(const size_t Count);
+	virtual void AllocateSecondaryCommandBuffer() {
+		AllocateSecondaryCommandBuffer(size(SwapchainBackBuffers));
+	}
 	virtual void AllocateComputeCommandBuffer();
 	virtual void AllocateCommandBuffer() {
 		AllocatePrimaryCommandBuffer();
@@ -777,12 +780,14 @@ protected:
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs);
 	virtual void CreateFramebuffer() {
 		const auto RP = RenderPasses[0];
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		for (const auto& i : SwapchainBackBuffers) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
 		}
 	}
 
 	[[nodiscard]] virtual VkShaderModule CreateShaderModule(const std::filesystem::path& Path) const;
+
+	virtual void CreateVideo() {}
 
 public:
 	struct PipelineCacheData
@@ -1028,10 +1033,16 @@ protected:
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
-	std::vector<VkImage> SwapchainImages;
 	uint32_t SwapchainImageIndex = 0;
-	std::vector<VkImageView> SwapchainImageViews;
+	struct SwapchainBackBuffer 
+	{
+		SwapchainBackBuffer(VkImage Img) { Image = Img; }
+		VkImage Image;
+		VkImageView ImageView;
+	};
+	std::vector<SwapchainBackBuffer> SwapchainBackBuffers;
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;

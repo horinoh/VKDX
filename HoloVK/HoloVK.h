@@ -49,7 +49,7 @@ protected:
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 #pragma region PASS	1
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
@@ -109,7 +109,7 @@ protected:
 		Transform.Projection = Projection;
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Transform));
 		}
 #pragma endregion
@@ -308,8 +308,8 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		for (const auto& i : SwapchainBackBuffers) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
 		}
 #pragma endregion
 	}
@@ -318,7 +318,7 @@ protected:
 		{
 			VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-				VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }) //!< UB * N
+				VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }) //!< UB * N
 #pragma endregion
 			});
 
@@ -330,7 +330,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -364,7 +364,7 @@ protected:
 			}),
 		}, DescriptorSetLayouts[0]);
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DBI);
 		}
@@ -381,12 +381,12 @@ protected:
 			}),
 		}, DescriptorSetLayouts[1]);
 		const auto DII = VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[size(SwapchainImages)], DUT, &DII);
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[size(SwapchainBackBuffers)], DUT, &DII);
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 #pragma endregion
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 			CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Transform), &Transform);
 		}
 #pragma endregion
@@ -446,7 +446,7 @@ protected:
 		//!< レンダーテクスチャ描画用
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
-		const auto SCCount = size(SwapchainImages);
+		const auto SCCount = size(SwapchainBackBuffers);
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 		{
 			const VkCommandBufferInheritanceInfo CBII = {
@@ -472,7 +472,7 @@ protected:
 
 				vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
 
-				const std::array DSs = { DescriptorSets[size(SwapchainImages)] };
+				const std::array DSs = { DescriptorSets[size(SwapchainBackBuffers)] };
 				constexpr std::array<uint32_t, 0> DynamicOffsets = {};
 				vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 

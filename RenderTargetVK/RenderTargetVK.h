@@ -27,7 +27,7 @@ protected:
 
 #pragma region PASS1
 		const auto SCP = SecondaryCommandPools[0];
-		const auto Count = static_cast<uint32_t>(size(SwapchainImages));
+		const auto Count = static_cast<uint32_t>(size(SwapchainBackBuffers));
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto Prev = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(Prev + Count);
@@ -254,8 +254,8 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		for (const auto& i : SwapchainBackBuffers) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
 		}
 #pragma endregion
 	}
@@ -345,8 +345,7 @@ protected:
 #pragma region PASS1
 		//!< レンダーテクスチャ描画用
 		const auto RP1 = RenderPasses[1];
-		const auto FB1 = Framebuffers[i + 1];
-		const auto SCCount = size(SwapchainImages);
+		const auto SCCount = size(SwapchainBackBuffers);
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 		{
 			const VkCommandBufferInheritanceInfo CBII = {
@@ -354,7 +353,7 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP1,
 				.subpass = 0,
-				.framebuffer = FB1,
+				.framebuffer = VK_NULL_HANDLE,
 				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
 				.pipelineStatistics = 0,
 			};
@@ -385,7 +384,7 @@ protected:
 
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
-		const auto SCCount = size(SwapchainImages);
+		const auto SCCount = size(SwapchainBackBuffers);
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount];
 
 #ifdef USE_SUBPASS

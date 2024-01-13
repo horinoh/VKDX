@@ -40,7 +40,7 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -111,7 +111,7 @@ protected:
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			//!< UB * N
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), 
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }), 
 #pragma endregion
 			//!< ImageSampler0 + ImageSampler1
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }), 
@@ -124,7 +124,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
@@ -170,7 +170,7 @@ protected:
 		const auto DII0 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< SamplerImage0
 		const auto DII1 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< SamplerImage1
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
-		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }); //!< UniformBuffer
 			const std::array WDSs = {
 				VkWriteDescriptorSet({

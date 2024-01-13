@@ -27,7 +27,7 @@ protected:
 
 #pragma region PASS1
 		//!< パス1 : セカンダリコマンドバッファ
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
@@ -150,8 +150,7 @@ protected:
 		Tr.World = World;
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
+		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -391,9 +390,9 @@ protected:
 
 		//!< パス1 : フレームバッファ
 		{
-			for (auto i : SwapchainImageViews) {
+			for (const auto& i : SwapchainBackBuffers) {
 				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { 
-					i,
+					i.ImageView,
 #ifndef USE_SHADOWMAP_VISUALIZE
 					DepthTextures[0].View
 #endif
@@ -405,7 +404,7 @@ protected:
 		//!< Pass0, Pass1 : デスクリプタプール
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) * 2 }), //!< UB * N * 2
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) * 2 }), //!< UB * N * 2
 #pragma endregion
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
 		});
@@ -420,7 +419,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -435,14 +434,14 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
+		const auto SCCount = size(SwapchainBackBuffers);
 		//!< パス0 :
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
