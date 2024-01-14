@@ -737,6 +737,9 @@ protected:
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
 
+	COM_PTR<ID3D12VideoDecoder> VideoDecoder;
+	COM_PTR<ID3D12VideoDecoderHeap> VideoDecoderHeap;
+	
 protected:
 	const D3D12_SHADER_BYTECODE NullSBC = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };
 };

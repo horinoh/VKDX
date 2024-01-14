@@ -936,124 +936,152 @@ void DX::CreateVideo()
 	COM_PTR<ID3D12VideoDevice> VideoDevice;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(VideoDevice)));
 
-	constexpr auto FrameRate30 = DXGI_RATIONAL({ .Numerator = 30, .Denominator = 1 });
-
-	//!< InputSample.Format 次第で上手くいかないので注意
-	auto FDVPS = D3D12_FEATURE_DATA_VIDEO_PROCESS_SUPPORT({
-		.NodeIndex = 0,
-		.InputSample = D3D12_VIDEO_SAMPLE({
-			.Width = 1024, .Height = 1024,
-			.Format = D3D12_VIDEO_FORMAT({.Format = DXGI_FORMAT_NV12, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 })
-		}),
-		.InputFieldType = D3D12_VIDEO_FIELD_TYPE_NONE,
-		.InputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
-		.InputFrameRate = FrameRate30,
-		.OutputFormat = D3D12_VIDEO_FORMAT({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 }),
-		.OutputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
-		.OutputFrameRate = FrameRate30,
-	});
-	VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_PROCESS_SUPPORT, reinterpret_cast<void*>(&FDVPS), sizeof(FDVPS)));
-
-	switch (FDVPS.SupportFlags)
-	{
-	case D3D12_VIDEO_PROCESS_SUPPORT_FLAG_NONE:
-	case D3D12_VIDEO_PROCESS_SUPPORT_FLAG_SUPPORTED:
-		break;
-	}
-
-	FDVPS.ScaleSupport.OutputSizeRange;
-	switch (FDVPS.ScaleSupport.Flags)
-	{
-	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_NONE:
-	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_POW2_ONLY:
-	case D3D12_VIDEO_SCALE_SUPPORT_FLAG_EVEN_DIMENSIONS_ONLY:
-		break;
-	}
-
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_FILL) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_LUMA_KEY) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_STEREO) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ROTATION) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_FLIP) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_BLENDING) {}
-	if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_PIXEL_ASPECT_RATIO) {}
-
-	if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_BOB) {}
-	if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_CUSTOM) {}
-
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DENOISE) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DERINGING) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_EDGE_ENHANCEMENT) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_COLOR_CORRECTION) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_FLESH_TONE_MAPPING) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_IMAGE_STABILIZATION) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_SUPER_RESOLUTION) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_ANAMORPHIC_SCALING) {}
-	if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_CUSTOM) {}
-
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_BRIGHTNESS) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_CONTRAST) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_HUE) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_SATURATION) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_NOISE_REDUCTION) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_EDGE_ENHANCEMENT) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_ANAMORPHIC_SCALING) {}
-	if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_STEREO_ADJUSTMENT) {}
-
-	FDVPS.FilterRangeSupport[0].Minimum;
-	FDVPS.FilterRangeSupport[0].Maximum;
-	FDVPS.FilterRangeSupport[0].Default;
-	FDVPS.FilterRangeSupport[0].Multiplier;
-
+	//!< デコードプロファイル数を取得
 	D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT FDVDPC = { .NodeIndex = 0 };
 	VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, reinterpret_cast<void*>(&FDVDPC), sizeof(FDVDPC)));
 	if (FDVDPC.ProfileCount) {
-		//std::array FDVDPs = {
-		//	D3D12_VIDEO_DECODE_PROFILE_MPEG2,
-		//	D3D12_VIDEO_DECODE_PROFILE_MPEG1_AND_MPEG2,
-		//	D3D12_VIDEO_DECODE_PROFILE_H264,
-		//	D3D12_VIDEO_DECODE_PROFILE_H264_STEREO_PROGRESSIVE,
-		//	D3D12_VIDEO_DECODE_PROFILE_H264_STEREO,
-		//	D3D12_VIDEO_DECODE_PROFILE_H264_MULTIVIEW,
-		//	D3D12_VIDEO_DECODE_PROFILE_VC1,
-		//	D3D12_VIDEO_DECODE_PROFILE_VC1_D2010,
-		//	D3D12_VIDEO_DECODE_PROFILE_MPEG4PT2_SIMPLE,
-		//	D3D12_VIDEO_DECODE_PROFILE_MPEG4PT2_ADVSIMPLE_NOGMC,
-		//	D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN,
-		//	D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN10,
-		//	D3D12_VIDEO_DECODE_PROFILE_VP9,
-		//	D3D12_VIDEO_DECODE_PROFILE_VP9_10BIT_PROFILE2,
-		//	D3D12_VIDEO_DECODE_PROFILE_VP8,
-		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE0,
-		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE1,
-		//	D3D12_VIDEO_DECODE_PROFILE_AV1_PROFILE2,
-		//	D3D12_VIDEO_DECODE_PROFILE_AV1_12BIT_PROFILE2,
-		//	D3D12_VIDEO_DECODE_PROFILE_AV1_12BIT_PROFILE2_420,
-		//};
-		std::vector<GUID> FDVDPs(FDVDPC.ProfileCount);
+		//!< デコードプロファイルを列挙
+		std::vector<GUID> Profiles(FDVDPC.ProfileCount);
 		auto FDVDP = D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES({
 			.NodeIndex = 0,
-			.ProfileCount = static_cast<UINT>(size(FDVDPs)),
-			.pProfiles = data(FDVDPs)
+			.ProfileCount = static_cast<UINT>(size(Profiles)),
+			.pProfiles = data(Profiles)
 		});
 		VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, reinterpret_cast<void*>(&FDVDP), sizeof(FDVDP)));
-		for (auto i : FDVDPs) {
-			auto FDVDS = D3D12_FEATURE_DATA_VIDEO_DECODE_SUPPORT({
-				.NodeIndex = 0,
-				.Configuration = D3D12_VIDEO_DECODE_CONFIGURATION({
-					.DecodeProfile = i,
-					.BitstreamEncryption = D3D12_BITSTREAM_ENCRYPTION_TYPE_NONE,
-					.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE
-				}),
-				.Width = 1024, .Height = 1024,
-				.DecodeFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
-				.FrameRate = FrameRate30,
-				.BitRate = 0,
-				});
-			//auto HR = VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, reinterpret_cast<void*>(&FDVDS), sizeof(FDVDS));
-			//if (SUCCEEDED(HR)) {
-			//	std::cout << FDVDS.BitRate << std::endl;
-			//}
+		for (auto i : Profiles) {
+			OutputDebugStringA(data(std::format("Prifile = {} {} {} {}\n", i.Data1, i.Data2, i.Data3, i.Data4[0])));
+			const auto Configration = D3D12_VIDEO_DECODE_CONFIGURATION({
+				.DecodeProfile = i,
+				.BitstreamEncryption = D3D12_BITSTREAM_ENCRYPTION_TYPE_NONE,
+				.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE
+			});
+			//!< デコードフォーマット数を取得
+			D3D12_FEATURE_DATA_VIDEO_DECODE_FORMAT_COUNT FDVDFC = { .NodeIndex = 0, .Configuration = Configration };
+			VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMAT_COUNT, reinterpret_cast<void*>(&FDVDFC), sizeof(FDVDFC)));
+			if (FDVDFC.FormatCount) {
+				//!< デコードフォーマットを列挙
+				std::vector<DXGI_FORMAT> Formats(FDVDFC.FormatCount);
+				D3D12_FEATURE_DATA_VIDEO_DECODE_FORMATS FDVDF = {
+					.NodeIndex = 0,
+					.Configuration = Configration,
+					.FormatCount = static_cast<UINT>(size(Formats)),
+					.pOutputFormats = data(Formats),
+				};
+				VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMATS, reinterpret_cast<void*>(&FDVDF), sizeof(FDVDF)));
+				for (auto j : Formats) {
+					OutputDebugStringA(data(std::format("\tFormat = {}\n", (int)j)));
+					
+					constexpr auto FrameRate30 = DXGI_RATIONAL({ .Numerator = 30, .Denominator = 1 });
+					//!< デコードサポート情報を取得
+					auto FDVDS = D3D12_FEATURE_DATA_VIDEO_DECODE_SUPPORT({
+						.NodeIndex = 0,
+						.Configuration = Configration,
+						.Width = 1024, .Height = 1024,
+						.DecodeFormat = j,
+						.FrameRate = FrameRate30,
+						.BitRate = 0,
+					});
+					VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, reinterpret_cast<void*>(&FDVDS), sizeof(FDVDS)));
+					if (FDVDS.SupportFlags & D3D12_VIDEO_DECODE_SUPPORT_FLAG_SUPPORTED) {
+						if (FDVDS.ConfigurationFlags& D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_HEIGHT_ALIGNMENT_MULTIPLE_32_REQUIRED) {}
+						if (FDVDS.ConfigurationFlags& D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_POST_PROCESSING_SUPPORTED) {}
+						if (FDVDS.ConfigurationFlags& D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED) {}
+						if (FDVDS.ConfigurationFlags& D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_ALLOW_RESOLUTION_CHANGE_ON_NON_KEY_FRAME) {}
+						switch (FDVDS.DecodeTier) {
+						case D3D12_VIDEO_DECODE_TIER_NOT_SUPPORTED:
+							break;
+						case D3D12_VIDEO_DECODE_TIER_1:
+							break;
+						case D3D12_VIDEO_DECODE_TIER_2:
+							break;
+						case D3D12_VIDEO_DECODE_TIER_3:
+							break;
+						}
+
+#if 0
+						//!< ビデオデコーダの作成
+						const D3D12_VIDEO_DECODER_DESC VDD = {
+							 .NodeMask = 0,
+							.Configuration = Configration
+						};
+						VERIFY_SUCCEEDED(VideoDevice->CreateVideoDecoder(&VDD, COM_PTR_UUIDOF_PUTVOID(VideoDecoder)));
+
+						//!< ビデオデコーダヒープの作成
+						const D3D12_VIDEO_DECODER_HEAP_DESC VDHD = {
+							.NodeMask = 0,
+							.Configuration = Configration,
+							.DecodeWidth = 1024, .DecodeHeight = 1024,
+							.Format = j,
+							.FrameRate = DXGI_RATIONAL({.Numerator = 0, .Denominator = 0 }),
+							.BitRate = 0,
+							.MaxDecodePictureBufferCount = 0
+						};
+						VERIFY_SUCCEEDED(VideoDevice->CreateVideoDecoderHeap(&VDHD, COM_PTR_UUIDOF_PUTVOID(VideoDecoderHeap)));
+#endif
+					}
+
+					//!< プロセスサポート情報を取得
+					auto FDVPS = D3D12_FEATURE_DATA_VIDEO_PROCESS_SUPPORT({
+						.NodeIndex = 0,
+						.InputSample = D3D12_VIDEO_SAMPLE({
+							.Width = 1024, .Height = 1024,
+							.Format = D3D12_VIDEO_FORMAT({.Format = j, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 })
+						}),
+						.InputFieldType = D3D12_VIDEO_FIELD_TYPE_NONE,
+						.InputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
+						.InputFrameRate = FrameRate30,
+						.OutputFormat = D3D12_VIDEO_FORMAT({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .ColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709 }),
+						.OutputStereoFormat = D3D12_VIDEO_FRAME_STEREO_FORMAT_NONE,
+						.OutputFrameRate = FrameRate30,
+					});
+					VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_PROCESS_SUPPORT, reinterpret_cast<void*>(&FDVPS), sizeof(FDVPS)));
+					if (FDVPS.SupportFlags & D3D12_VIDEO_PROCESS_SUPPORT_FLAG_SUPPORTED) {
+						FDVPS.ScaleSupport.OutputSizeRange;
+						switch (FDVPS.ScaleSupport.Flags)
+						{
+						case D3D12_VIDEO_SCALE_SUPPORT_FLAG_NONE:
+						case D3D12_VIDEO_SCALE_SUPPORT_FLAG_POW2_ONLY:
+						case D3D12_VIDEO_SCALE_SUPPORT_FLAG_EVEN_DIMENSIONS_ONLY:
+							break;
+						}
+
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_FILL) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_LUMA_KEY) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_STEREO) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ROTATION) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_FLIP) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_ALPHA_BLENDING) {}
+						if (FDVPS.FeatureSupport & D3D12_VIDEO_PROCESS_FEATURE_FLAG_PIXEL_ASPECT_RATIO) {}
+
+						if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_BOB) {}
+						if (FDVPS.DeinterlaceSupport & D3D12_VIDEO_PROCESS_DEINTERLACE_FLAG_CUSTOM) {}
+
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DENOISE) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_DERINGING) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_EDGE_ENHANCEMENT) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_COLOR_CORRECTION) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_FLESH_TONE_MAPPING) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_IMAGE_STABILIZATION) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_SUPER_RESOLUTION) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_ANAMORPHIC_SCALING) {}
+						if (FDVPS.AutoProcessingSupport & D3D12_VIDEO_PROCESS_AUTO_PROCESSING_FLAG_CUSTOM) {}
+
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_BRIGHTNESS) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_CONTRAST) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_HUE) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_SATURATION) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_NOISE_REDUCTION) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_EDGE_ENHANCEMENT) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_ANAMORPHIC_SCALING) {}
+						if (FDVPS.FilterSupport & D3D12_VIDEO_PROCESS_FILTER_FLAG_STEREO_ADJUSTMENT) {}
+
+						FDVPS.FilterRangeSupport[0].Minimum;
+						FDVPS.FilterRangeSupport[0].Maximum;
+						FDVPS.FilterRangeSupport[0].Default;
+						FDVPS.FilterRangeSupport[0].Multiplier;
+					}
+				}
+			}
 		}
 	}
 }
