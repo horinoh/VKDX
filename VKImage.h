@@ -127,6 +127,10 @@ public:
 		}
 	};
 	
+	void SaveToFile(gli::texture GLITex, std::string_view FileName) {
+		gli::save(GLITex, data(FileName));
+	}
+
 protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		for (auto& i : GLITextures) { i.Destroy(Device); } GLITextures.clear();

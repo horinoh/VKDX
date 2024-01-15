@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29306.81
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34408.163
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TriangleVK", "TriangleVK\TriangleVK.vcxproj", "{61FF54DD-E9CB-43C2-BF2C-69E33A1506C4}"
 EndProject
@@ -74,10 +74,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowMapDX", "ShadowMapDX\ShadowMapDX.vcxproj", "{448193A1-DC02-4ADA-886A-CB67D4631FB7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowMapVK", "ShadowMapVK\ShadowMapVK.vcxproj", "{4B0ED6E1-3404-4975-A2E8-CFCD0AB8D479}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HoloDX", "HoloDX\HoloDX.vcxproj", "{49A5E3EB-E8BC-4133-876B-2302874FCB28}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HoloVK", "HoloVK\HoloVK.vcxproj", "{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LeapDX", "LeapDX\LeapDX.vcxproj", "{00E37F06-1145-4738-9E5E-333ED8E4B35F}"
 EndProject
@@ -431,22 +427,6 @@ Global
 		{4B0ED6E1-3404-4975-A2E8-CFCD0AB8D479}.Release|x64.Build.0 = Release|x64
 		{4B0ED6E1-3404-4975-A2E8-CFCD0AB8D479}.Release|x86.ActiveCfg = Release|Win32
 		{4B0ED6E1-3404-4975-A2E8-CFCD0AB8D479}.Release|x86.Build.0 = Release|Win32
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Debug|x64.ActiveCfg = Debug|x64
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Debug|x64.Build.0 = Debug|x64
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Debug|x86.ActiveCfg = Debug|Win32
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Debug|x86.Build.0 = Debug|Win32
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Release|x64.ActiveCfg = Release|x64
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Release|x64.Build.0 = Release|x64
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Release|x86.ActiveCfg = Release|Win32
-		{49A5E3EB-E8BC-4133-876B-2302874FCB28}.Release|x86.Build.0 = Release|Win32
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Debug|x64.ActiveCfg = Debug|x64
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Debug|x64.Build.0 = Debug|x64
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Debug|x86.ActiveCfg = Debug|Win32
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Debug|x86.Build.0 = Debug|Win32
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Release|x64.ActiveCfg = Release|x64
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Release|x64.Build.0 = Release|x64
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Release|x86.ActiveCfg = Release|Win32
-		{AE513BD7-B4D1-4B0D-B1AD-4547F8FD2806}.Release|x86.Build.0 = Release|Win32
 		{00E37F06-1145-4738-9E5E-333ED8E4B35F}.Debug|x64.ActiveCfg = Debug|x64
 		{00E37F06-1145-4738-9E5E-333ED8E4B35F}.Debug|x64.Build.0 = Debug|x64
 		{00E37F06-1145-4738-9E5E-333ED8E4B35F}.Debug|x86.ActiveCfg = Debug|Win32

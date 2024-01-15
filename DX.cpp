@@ -1018,6 +1018,20 @@ void DX::CreateVideo()
 						};
 						VERIFY_SUCCEEDED(VideoDevice->CreateVideoDecoderHeap(&VDHD, COM_PTR_UUIDOF_PUTVOID(VideoDecoderHeap)));
 #endif
+
+						D3D12_VIDEO_DECODE_FRAME_ARGUMENT VDFAs = {.Type= D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS, .Size = 0, .pData = nullptr };
+
+						D3D12_VIDEO_DECODE_REFERENCE_FRAMES VDRF = {
+							.NumTexture2Ds=1,
+						}; 
+						D3D12_VIDEO_DECODE_COMPRESSED_BITSTREAM VDCB = { .pBuffer = nullptr, .Offset = 0, .Size = 0 };
+						D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS VDISA = {
+							.NumFrameArguments = 1,
+							.FrameArguments = VDFAs,
+							.ReferenceFrames = VDRF,
+							.CompressedBitstream = VDCB,
+							.pHeap = COM_PTR_GET(VideoDecoderHeap)
+						};
 					}
 
 					//!< プロセスサポート情報を取得

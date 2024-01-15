@@ -1,7 +1,9 @@
 #pragma once
 
-#include "DDSTextureLoader.h"
-#include "WICTextureLoader.h"
+#include <DDSTextureLoader.h>
+#include <WICTextureLoader.h>
+#include <ScreenGrab.h>
+#include <wincodec.h>
 
 #include "DXRT.h"
 
@@ -61,6 +63,10 @@ public:
 			Data.reset();
 		}
 	};
+
+	void SaveToFile(const RenderTexture& RT, std::wstring_view FileName) {
+		VERIFY_SUCCEEDED(DirectX::SaveDDSTextureToFile(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(RT.Resource), data(FileName), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	}
 
 protected:
 	std::vector<XTKTexture> XTKTextures;
