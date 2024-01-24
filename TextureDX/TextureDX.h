@@ -135,21 +135,24 @@ protected:
 #endif
 	}
 
-	virtual void PopulateCommandList(const size_t i) override {
+	virtual void PopulateBundleCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
+
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
 			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
 		VERIFY_SUCCEEDED(BCL->Close());
-
+	}
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 

@@ -140,13 +140,11 @@ protected:
 		for (auto& i : Threads) { i.join(); }
 		Threads.clear();
 	}
-
-	virtual void PopulateCommandList(const size_t i) override {
+	virtual void PopulateBundleCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-#pragma region BUNDLE_COMMAND_LIST
 		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
 			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -158,11 +156,13 @@ protected:
 			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
 		VERIFY_SUCCEEDED(BCL->Close());
-#pragma endregion
-
+	}
+	virtual void PopulateCommandList(const size_t i) override {
 		const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(DCL->Reset(DCA, PS));
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
+
+		VERIFY_SUCCEEDED(DCL->Reset(DCA, nullptr));
 		{
 #if defined(_DEBUG) || defined(USE_PIX)
 			PIXScopedEvent(DCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));

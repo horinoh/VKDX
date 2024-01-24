@@ -308,12 +308,10 @@ protected:
 #pragma endregion
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
-	
 	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 #pragma region PASS0
 		//!< ƒƒbƒVƒ…•`‰æ—p
 		const auto RP0 = RenderPasses[0];
-		const auto FB0 = Framebuffers[0];
 		const auto SCB0 = SecondaryCommandBuffers[i];
 		{
 			const VkCommandBufferInheritanceInfo CBII = {
@@ -321,7 +319,7 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP0,
 				.subpass = 0,
-				.framebuffer = FB0,
+				.framebuffer = VK_NULL_HANDLE,
 				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
 				.pipelineStatistics = 0,
 			};

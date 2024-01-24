@@ -126,16 +126,16 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DII);
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
-	virtual void PopulateCommandBuffer(const size_t i) override {
+	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];
-		const auto FB = Framebuffers[i];
+		const auto SCB = SecondaryCommandBuffers[i];
 
 		const VkCommandBufferInheritanceInfo CBII = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 			.pNext = nullptr,
 			.renderPass = RP,
 			.subpass = 0,
-			.framebuffer = FB,
+			.framebuffer = VK_NULL_HANDLE,
 			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
 			.pipelineStatistics = 0,
 		};
@@ -145,7 +145,6 @@ protected:
 			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
 			.pInheritanceInfo = &CBII
 		};
-		const auto SCB = SecondaryCommandBuffers[i];
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
@@ -157,6 +156,12 @@ protected:
 
 			vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+	}
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto RP = RenderPasses[0];
+		const auto FB = Framebuffers[i];
+		const auto SCB = SecondaryCommandBuffers[i];
+		const auto CB = CommandBuffers[i];
 
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -164,7 +169,6 @@ protected:
 			.flags = 0,
 			.pInheritanceInfo = nullptr
 		};
-		const auto CB = CommandBuffers[i];
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			constexpr std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {

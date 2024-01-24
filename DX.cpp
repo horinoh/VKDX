@@ -94,6 +94,8 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 	constexpr UINT_PTR IDT_TIMER1 = 1000; //!< 何でも良い
 	KillTimer(hWnd, IDT_TIMER1); {
+		OnPreDestroy();
+
 		PERFORMANCE_COUNTER();
 
 		Super::OnExitSizeMove(hWnd, hInstance);
@@ -750,15 +752,13 @@ void DX::ResizeDepthStencil([[maybe_unused]] const DXGI_FORMAT DepthFormat, [[ma
 	LOG_OK();
 }
 
-void DX::CreateDirectCommandList()
+void DX::CreateDirectCommandList(const UINT Count)
 {
 	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
 
 	const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
-	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
-	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+	for (UINT i = 0; i < Count; ++i) {
 		//!< パイプラインステートは後からでも指定できる GCL->Reset(CA, COM_PTR_GET(PS)) ので、ここでは nullptr を指定
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, DCA, nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());

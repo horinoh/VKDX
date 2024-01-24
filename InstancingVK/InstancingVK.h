@@ -31,7 +31,13 @@ protected:
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		constexpr VkDrawIndexedIndirectCommand DIIC = { 
+			.indexCount = static_cast<uint32_t>(size(Indices)), 
+			.instanceCount = static_cast<uint32_t>(size(Instances)), 
+			.firstIndex = 0, 
+			.vertexOffset = 0, 
+			.firstInstance = 0
+		};
 
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
 		VK::Scoped<StagingBuffer> Staging_Vertex0(Device);
@@ -109,17 +115,16 @@ protected:
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 
-	virtual void PopulateCommandBuffer(const size_t i) override {
+	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];
-		const auto FB = Framebuffers[i];
-
 		const auto SCB = SecondaryCommandBuffers[i];
+
 		const VkCommandBufferInheritanceInfo CBII = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 			.pNext = nullptr,
 			.renderPass = RP,
 			.subpass = 0,
-			.framebuffer = FB,
+			.framebuffer = VK_NULL_HANDLE,
 			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
 			.pipelineStatistics = 0,
 		};
@@ -143,8 +148,13 @@ protected:
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
-
+	}
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto RP = RenderPasses[0];
+		const auto FB = Framebuffers[i];
 		const auto CB = CommandBuffers[i];
+		const auto SCB = SecondaryCommandBuffers[i];
+
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.pNext = nullptr,
