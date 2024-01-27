@@ -78,7 +78,7 @@ namespace Phys
 
 		virtual Vec3 GetCenterOfMass() const override { return Vec3::Zero(); }
 		virtual Mat3 GetInertiaTensor() const override {
-			const auto W2 = Extent.x() * Extent.x(), H2 = Extent.y() * Extent.y(), D2 = Extent.z() * Extent.z();
+			const auto W2 = Extent.X() * Extent.X(), H2 = Extent.Y() * Extent.Y(), D2 = Extent.Z() * Extent.Z();
 			return {
 				{ (H2 + D2) / 12.0f, 0.0f, 0.0f },
 				{ 0.0f, (W2 + D2) / 12.0f, 0.0f },
@@ -89,12 +89,12 @@ namespace Phys
 		virtual AABB GetAABB(const Vec3& Pos, [[maybe_unused]] const Quat& Rot) const override {
 			const std::array Points = {
 				Extent,
-				Vec3(Extent.x(), Extent.y(), -Extent.z()),
-				Vec3(Extent.x(), -Extent.y(), Extent.z()),
-				Vec3(Extent.x(), -Extent.y(), -Extent.z()),
-				Vec3(-Extent.x(), Extent.y(), Extent.z()),
-				Vec3(-Extent.x(), Extent.y(), -Extent.z()),
-				Vec3(-Extent.x(), -Extent.y(), Extent.z()),
+				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
+				Vec3(Extent.X(), -Extent.Y(), Extent.Z()),
+				Vec3(Extent.X(), -Extent.Y(), -Extent.Z()),
+				Vec3(-Extent.X(), Extent.Y(), Extent.Z()),
+				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()),
+				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
 				-Extent };
 
 			AABB Aabb;
@@ -109,12 +109,12 @@ namespace Phys
 		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const override {
 			const std::array Points = { 
 				Extent,
-				Vec3(Extent.x(), Extent.y(), -Extent.z()),
-				Vec3(Extent.x(), -Extent.y(), Extent.z()), 
-				Vec3(Extent.x(), -Extent.y(), -Extent.z()),
-				Vec3(-Extent.x(), Extent.y(), Extent.z()), 
-				Vec3(-Extent.x(), Extent.y(), -Extent.z()), 
-				Vec3(-Extent.x(), -Extent.y(), Extent.z()),
+				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
+				Vec3(Extent.X(), -Extent.Y(), Extent.Z()), 
+				Vec3(Extent.X(), -Extent.Y(), -Extent.Z()),
+				Vec3(-Extent.X(), Extent.Y(), Extent.Z()), 
+				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()), 
+				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
 				-Extent };
 
 			const auto MaxPt = std::ranges::max_element(Points, [&](const auto lhs, const auto rhs) {
@@ -127,12 +127,12 @@ namespace Phys
 		float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const {
 			const std::array Points = {
 				Extent,
-				Vec3(Extent.x(), Extent.y(), -Extent.z()),
-				Vec3(Extent.x(), -Extent.y(), Extent.z()),
-				Vec3(Extent.x(), -Extent.y(), -Extent.z()),
-				Vec3(-Extent.x(), Extent.y(), Extent.z()),
-				Vec3(-Extent.x(), Extent.y(), -Extent.z()),
-				Vec3(-Extent.x(), -Extent.y(), Extent.z()),
+				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
+				Vec3(Extent.X(), -Extent.Y(), Extent.Z()),
+				Vec3(Extent.X(), -Extent.Y(), -Extent.Z()),
+				Vec3(-Extent.X(), Extent.Y(), Extent.Z()),
+				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()),
+				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
 				-Extent };
 
 			auto MaxSpeed = 0.0f;

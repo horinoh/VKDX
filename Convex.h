@@ -180,7 +180,7 @@ namespace Convex
 		for (auto x = 0; x < SampleCount; ++x) {
 			for (auto y = 0; y < SampleCount; ++y) {
 				for (auto z = 0; z < SampleCount; ++z) {
-					const auto Pt = Vec3(Aabb.Min.x() + d.x() * x, Aabb.Min.y() + d.y() * y, Aabb.Min.z() + d.z() * z);
+					const auto Pt = Vec3(Aabb.Min.X() + d.X() * x, Aabb.Min.Y() + d.Y() * y, Aabb.Min.Z() + d.Z() * z);
 					if (IsInternal(Pt, HullVerts, HullInds)) {
 						CenterOfMass += Pt;
 						++Sampled;
@@ -200,20 +200,20 @@ namespace Convex
 		for (auto x = 0; x < SampleCount; ++x) {
 			for (auto y = 0; y < SampleCount; ++y) {
 				for (auto z = 0; z < SampleCount; ++z) {
-					const auto Pt = Vec3(Aabb.Min.x() + d.x() * x, Aabb.Min.y() + d.y() * y, Aabb.Min.z() + d.z() * z) - CenterOfMass;
+					const auto Pt = Vec3(Aabb.Min.X() + d.Z() * x, Aabb.Min.Y() + d.Y() * y, Aabb.Min.Z() + d.Z() * z) - CenterOfMass;
 					if (IsInternal(Pt, HullVerts, HullInds)) {
 
-						InertiaTensor[0][0] += Pt.y() * Pt.y() + Pt.z() * Pt.z();
-						InertiaTensor[1][1] += Pt.z() * Pt.z() + Pt.x() * Pt.x();
-						InertiaTensor[2][2] += Pt.x() * Pt.x() + Pt.y() * Pt.y();
+						InertiaTensor[0][0] += Pt.Y() * Pt.Y() + Pt.Z() * Pt.Z();
+						InertiaTensor[1][1] += Pt.Z() * Pt.Z() + Pt.X() * Pt.X();
+						InertiaTensor[2][2] += Pt.X() * Pt.X() + Pt.Y() * Pt.Y();
 
-						InertiaTensor[0][1] += -Pt.x() * Pt.y();
-						InertiaTensor[0][2] += -Pt.x() * Pt.z();
-						InertiaTensor[1][2] += -Pt.y() * Pt.z();
+						InertiaTensor[0][1] += -Pt.X() * Pt.Y();
+						InertiaTensor[0][2] += -Pt.X() * Pt.Z();
+						InertiaTensor[1][2] += -Pt.Y() * Pt.Z();
 
-						InertiaTensor[1][0] += -Pt.x() * Pt.y();
-						InertiaTensor[2][0] += -Pt.x() * Pt.z();
-						InertiaTensor[2][1] += -Pt.y() * Pt.z();
+						InertiaTensor[1][0] += -Pt.X() * Pt.Y();
+						InertiaTensor[2][0] += -Pt.X() * Pt.Z();
+						InertiaTensor[2][1] += -Pt.Y() * Pt.Z();
 
 						++Sampled;
 					}

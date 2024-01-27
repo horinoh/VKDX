@@ -210,30 +210,30 @@ public:
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
 #else
 			constexpr std::array DRs_Srv = {
-				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+				D3D12_DESCRIPTOR_RANGE1({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			constexpr std::array DRs_Uav = {
-				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+				D3D12_DESCRIPTOR_RANGE1({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			DX::SerializeRootSignature(Blob, {
 				//!< SRV0, SRV1 (TLAS, CubeMap) ... register(t0, space0), register(t1, space0)
-				D3D12_ROOT_PARAMETER({
+				D3D12_ROOT_PARAMETER1({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
-					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE1({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL 
 				}),
 				//!< UAV0 (RenderTarget) ... register(u0, space0)
-				D3D12_ROOT_PARAMETER({
+				D3D12_ROOT_PARAMETER1({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
-					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE1({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				//!< CBV0 (CB) ... register(b0, space0)
 				//!< バックバッファ分のシェーダテーブルを作成しないで済むように SetComputeRootConstantBufferView() を使用する
 				//!< SetComputeRootConstantBufferView() を使用する為、D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用
-				D3D12_ROOT_PARAMETER({
+				D3D12_ROOT_PARAMETER1({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
-					.Descriptor = D3D12_ROOT_DESCRIPTOR({ .ShaderRegister = 0, .RegisterSpace = 0 }),
+					.Descriptor = D3D12_ROOT_DESCRIPTOR1({ .ShaderRegister = 0, .RegisterSpace = 0, .Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE}),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 			}, {
@@ -252,15 +252,15 @@ public:
 #else
 			DX::SerializeRootSignature(Blob, {
 				//!< SRV0 (VB) ... register(t0, space1)
-				D3D12_ROOT_PARAMETER({
+				D3D12_ROOT_PARAMETER1({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
-					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 0, .RegisterSpace = 1 }),
+					.Descriptor = D3D12_ROOT_DESCRIPTOR1({.ShaderRegister = 0, .RegisterSpace = 1, .Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				//!< SRV1 (IB) ... register(t1, space1)
-				D3D12_ROOT_PARAMETER({
+				D3D12_ROOT_PARAMETER1({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
-					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 1 }),
+					.Descriptor = D3D12_ROOT_DESCRIPTOR1({.ShaderRegister = 1, .RegisterSpace = 1, .Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE); //!< ローカルルートシグネチャでは D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE を指定して作成

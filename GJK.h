@@ -64,7 +64,7 @@ namespace Colli
 				const auto c = Vec2(C[j], C[k]);
 				const auto ab = b - a;
 				const auto ac = c - a;
-				const auto Area = ab.x() * ac.y() - ab.y() * ac.x();
+				const auto Area = ab.X() * ac.Y() - ab.Y() * ac.X();
 				if (std::abs(Area) > std::abs(MaxArea)) {
 					MaxArea = Area;
 
@@ -86,11 +86,11 @@ namespace Colli
 
 				const auto ab = PrjPlane[j] - PrjP;
 				const auto ac = PrjPlane[k] - PrjP;
-				Areas[i] = ab.x() * ac.y() - ab.y() * ac.x();
+				Areas[i] = ab.X() * ac.Y() - ab.Y() * ac.X();
 			}
 
 			//!< 射影点が三角形の内部
-			if (Sign(MaxArea) == Sign(Areas.x()) && Sign(MaxArea) == Sign(Areas.y()) && Sign(MaxArea) == Sign(Areas.z())) {
+			if (Sign(MaxArea) == Sign(Areas.X()) && Sign(MaxArea) == Sign(Areas.Y()) && Sign(MaxArea) == Sign(Areas.Z())) {
 				return Areas / MaxArea;
 			}
 
@@ -116,10 +116,10 @@ namespace Colli
 		}
 		[[nodiscard]] static Vec4 SignedVolume(const Vec3& A, const Vec3& B, const Vec3& C, const Vec3& D) {
 			const auto Cofactor = Vec4(-Mat3(B, C, D).Determinant(), Mat3(A, C, D).Determinant(), -Mat3(A, B, D).Determinant(), Mat3(A, B, C).Determinant());
-			const auto Det = Cofactor.x() + Cofactor.y() + Cofactor.z() + Cofactor.w();
+			const auto Det = Cofactor.X() + Cofactor.Y() + Cofactor.Z() + Cofactor.W();
 
 			//!< 四面体内部にあれば、重心座標を返す
-			if (Sign(Det) == Sign(Cofactor.x()) && Sign(Det) == Sign(Cofactor.y()) && Sign(Det) == Sign(Cofactor.z()) && Sign(Det) == Sign(Cofactor.w())) {
+			if (Sign(Det) == Sign(Cofactor.X()) && Sign(Det) == Sign(Cofactor.Y()) && Sign(Det) == Sign(Cofactor.Z()) && Sign(Det) == Sign(Cofactor.W())) {
 				return Cofactor / Det;
 			}
 

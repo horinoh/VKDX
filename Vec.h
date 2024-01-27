@@ -5,10 +5,9 @@ namespace Math
 	class Vec2
 	{
 	public:
-		Vec2() : _x(0.0f), _y(0.0f) {}
-		Vec2(const float x, const float y) : _x(x), _y(y) {}
-		Vec2(const Vec2& rhs) : _x(rhs.x()), _y(rhs.y()) {}
-		Vec2(const float rhs) : _x(rhs), _y(rhs) {}
+		Vec2() {}
+		Vec2(const float x, const float y) : Comps({x, y}) {}
+		Vec2(const float rhs) : Comps({ rhs, rhs }) {}
 
 		inline static Vec2 Zero() { return { 0.0f, 0.0f }; }
 		inline static Vec2 One() { return { 1.0f, 1.0f }; }
@@ -18,22 +17,22 @@ namespace Math
 		inline static Vec2 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec2 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
 
-		inline bool NearlyEqual(const Vec2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon; }
+		inline bool NearlyEqual(const Vec2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon; }
 
-		inline bool operator==(const Vec2& rhs) const { return x() == rhs.x() && y() == rhs.y(); }
+		inline bool operator==(const Vec2& rhs) const { return X() == rhs.X() && Y() == rhs.Y(); }
 		inline bool operator!=(const Vec2& rhs) const { return !(*this == rhs); }
-		inline Vec2 operator+(const Vec2& rhs) const { return { x() + rhs.x(), y() + rhs.y() }; }
-		inline Vec2 operator-(const Vec2& rhs) const { return { x() - rhs.x(), y() - rhs.y() }; }
-		inline Vec2 operator*(const float rhs) const { return { x() * rhs, y() * rhs }; }
-		inline Vec2 operator/(const float rhs) const { return { x() / rhs, y() / rhs }; }
-		inline Vec2 operator-() const { return { -x(), -y() }; }
+		inline Vec2 operator+(const Vec2& rhs) const { return { X() + rhs.X(), Y() + rhs.Y() }; }
+		inline Vec2 operator-(const Vec2& rhs) const { return { X() - rhs.X(), Y() - rhs.Y() }; }
+		inline Vec2 operator*(const float rhs) const { return { X() * rhs, Y() * rhs }; }
+		inline Vec2 operator/(const float rhs) const { return { X() / rhs, Y() / rhs }; }
+		inline Vec2 operator-() const { return { -X(), -Y() }; }
 		
-		inline float x() const { return _x; }
-		inline float y() const { return _y; }
-		inline float operator[](const int i) const { return (&_x)[i]; }
-		inline operator const float* () const { return &_x; }
+		inline float X() const { return Comps[0]; }
+		inline float Y() const { return Comps[1]; }
+		inline float operator[](const int i) const { return Comps[i]; }
+		inline operator const float* () const { return data(Comps); }
 
-		inline float Dot(const Vec2& rhs) const { return x() * rhs.x() + y() * rhs.y(); }
+		inline float Dot(const Vec2& rhs) const { return X() * rhs.X() + Y() * rhs.Y(); }
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
 		inline Vec2 Normalize() const {
@@ -44,30 +43,27 @@ namespace Math
 			return *this;
 		}
 
-		inline Vec2& operator=(const Vec2& rhs) { _x = rhs.x(); _y = rhs.y(); return *this; }
-		inline const Vec2& operator+=(const Vec2& rhs) { _x += rhs.x(); _y += rhs.y(); return *this; }
-		inline const Vec2& operator-=(const Vec2& rhs) { _x -= rhs.x(); _y -= rhs.y(); return *this; }
-		inline const Vec2& operator*=(const float rhs) { _x *= rhs; _y *= rhs; return *this; }
-		inline const Vec2& operator/=(const float rhs) { _x /= rhs; _y /= rhs; return *this; }
-		inline float& operator[](const int i) { return (&_x)[i]; }
-		inline operator float* () { return &_x; }
+		inline Vec2& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
+		inline const Vec2& operator+=(const Vec2& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); return *this; }
+		inline const Vec2& operator-=(const Vec2& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); return *this; }
+		inline const Vec2& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; return *this; }
+		inline const Vec2& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; return *this; }
+		inline float& operator[](const int i) { return Comps[i]; }
+		inline operator float* () { return data(Comps); }
 
 		inline Vec2& ToZero() { return (*this = Zero()); }
 		inline Vec2& ToNormalize() { return (*this = Normalize()); }
 		
 	private:
-		float _x, _y;
-		//glm::vec2;
-		//XMFLOAT2;
+		std::array<float, 2> Comps = { 0.0f, 0.0f };
 	};
 
 	class Vec3
 	{
 	public:
-		Vec3() : _x(0.0f), _y(0.0f), _z(0.0f) {}
-		Vec3(const float x, const float y, const float z) : _x(x), _y(y), _z(z) {}
-		Vec3(const Vec3& rhs) : _x(rhs.x()), _y(rhs.y()), _z(rhs.z()) {}
-		Vec3(const float rhs) : _x(rhs), _y(rhs), _z(rhs) {}
+		Vec3() {}
+		Vec3(const float x, const float y, const float z) : Comps({x,y,z}) {}
+		Vec3(const float rhs) : Comps({rhs,rhs,rhs}) {}
 
 		inline static Vec3 Zero() { return { 0.0f, 0.0f, 0.0f }; }
 		inline static Vec3 One() { return { 1.0f, 1.0f, 1.0f }; }
@@ -78,23 +74,23 @@ namespace Math
 		inline static Vec3 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec3 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
 
-		inline bool NearlyEqual(const Vec3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon && std::abs(z() - rhs.z()) < Epsilon; }
+		inline bool NearlyEqual(const Vec3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon; }
 
-		inline bool operator==(const Vec3& rhs) const { return x() == rhs.x() && y() == rhs.y() && z() == rhs.z(); }
+		inline bool operator==(const Vec3& rhs) const { return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z(); }
 		inline bool operator!=(const Vec3& rhs) const { return !(*this == rhs); }
-		inline Vec3 operator+(const Vec3& rhs) const { return { x() + rhs.x(), y() + rhs.y(), z() + rhs.z() }; }
-		inline Vec3 operator-(const Vec3& rhs) const { return { x() - rhs.x(), y() - rhs.y(), z() - rhs.z() }; }
-		inline Vec3 operator*(const float rhs) const { return { x() * rhs, y() * rhs, z() * rhs }; }
-		inline Vec3 operator/(const float rhs) const { return { x() / rhs, y() / rhs, z() / rhs }; }
-		inline Vec3 operator-() const { return { -x(), -y(), -z() }; }
+		inline Vec3 operator+(const Vec3& rhs) const { return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z() }; }
+		inline Vec3 operator-(const Vec3& rhs) const { return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z() }; }
+		inline Vec3 operator*(const float rhs) const { return { X() * rhs, Y() * rhs, Z() * rhs }; }
+		inline Vec3 operator/(const float rhs) const { return { X() / rhs, Y() / rhs, Z() / rhs }; }
+		inline Vec3 operator-() const { return { -X(), -Y(), -Z() }; }
 
-		inline float x() const { return _x; }
-		inline float y() const { return _y; }
-		inline float z() const { return _z; }
-		inline float operator[](const int i) const { return (&_x)[i]; }
-		inline operator const float* () const { return &_x; }
+		inline float X() const { return Comps[0]; }
+		inline float Y() const { return Comps[1]; }
+		inline float Z() const { return Comps[2]; }
+		inline float operator[](const int i) const { return Comps[i]; }
+		inline operator const float* () const { return data(Comps); }
 
-		inline float Dot(const Vec3& rhs) const { return x() * rhs.x() + y() * rhs.y() + z() * rhs.z(); }
+		inline float Dot(const Vec3& rhs) const { return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z(); }
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrt(LengthSq()); }
 		inline Vec3 Normalize() const {
@@ -104,32 +100,29 @@ namespace Math
 			}
 			return *this;
 		}
-		inline Vec3 Cross(const Vec3& rhs) const { return Vec3(y() * rhs.z() - rhs.y() * z(), rhs.x() * z() - x() * rhs.z(), x() * rhs.y() - rhs.x() * y()); }
+		inline Vec3 Cross(const Vec3& rhs) const { return Vec3(Y() * rhs.Z() - rhs.Y() * Z(), rhs.X() * Z() - X() * rhs.Z(), X() * rhs.Y() - rhs.X() * Y()); }
 
-		inline Vec3& operator=(const Vec3& rhs) { _x = rhs.x(); _y = rhs.y(); _z = rhs.z(); return *this; }
-		inline const Vec3& operator+=(const Vec3& rhs) { _x += rhs.x(); _y += rhs.y(); _z += rhs.z(); return *this; }
-		inline const Vec3& operator-=(const Vec3& rhs) { _x -= rhs.x(); _y -= rhs.y(); _z -= rhs.z(); return *this; }
-		inline const Vec3& operator*=(const float rhs) { _x *= rhs; _y *= rhs; _z *= rhs; return *this; }
-		inline const Vec3& operator/=(const float rhs) { _x /= rhs; _y /= rhs; _z /= rhs; return *this; }
-		inline float& operator[](const int i) { return (&_x)[i]; }
-		inline operator float* () { return &_x; }
+		inline Vec3& operator=(const Vec3& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); return *this; }
+		inline const Vec3& operator+=(const Vec3& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); return *this; }
+		inline const Vec3& operator-=(const Vec3& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); return *this; }
+		inline const Vec3& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; return *this; }
+		inline const Vec3& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; return *this; }
+		inline float& operator[](const int i) { return Comps[i]; }
+		inline operator float* () { return data(Comps); }
 
 		inline Vec3& ToZero() { return (*this = Zero()); }
 		inline Vec3& ToNormalized() { return (*this = Normalize()); }
 
 	private:
-		float _x, _y, _z; 
-		//glm::vec3;
-		//XMFLOAT3;
+		std::array<float, 3> Comps = { 0.0f, 0.0f, 0.0f };
 	};
 
 	class Vec4
 	{
 	public:
-		Vec4() : _x(0.0f), _y(0.0f), _z(0.0f), _w(0.0f) {}
-		Vec4(const float x, const float y, const float z, const float w) : _x(x), _y(y), _z(z), _w(w) {}
-		Vec4(const Vec4& rhs) : _x(rhs.x()), _y(rhs.y()), _z(rhs.z()), _w(rhs.w()) {}
-		Vec4(const float rhs) : _x(rhs), _y(rhs), _z(rhs), _w(rhs) {}
+		Vec4() {}
+		Vec4(const float x, const float y, const float z, const float w) : Comps({x,y,z,w}) {}
+		Vec4(const float rhs) : Comps({rhs,rhs,rhs,rhs}) {}
 
 		inline static Vec4 Zero() { return { 0.0f, 0.0f, 0.0f, 0.0f }; }
 		inline static Vec4 One() { return { 1.0f, 1.0f, 1.0f, 1.0f }; }
@@ -141,24 +134,24 @@ namespace Math
 		inline static Vec4 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec4 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
 
-		inline bool NearlyEqual(const Vec4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon && std::abs(z() - rhs.z()) < Epsilon && std::abs(w() - rhs.w()) < Epsilon; }
+		inline bool NearlyEqual(const Vec4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon && std::abs(W() - rhs.W()) < Epsilon; }
 
-		inline bool operator==(const Vec4& rhs) const { return x() == rhs.x() && y() == rhs.y() && z() == rhs.z() && w() == rhs.w(); }
+		inline bool operator==(const Vec4& rhs) const { return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z() && W() == rhs.W(); }
 		inline bool operator!=(const Vec4& rhs) const { return !(*this == rhs); }
-		inline Vec4 operator+(const Vec4& rhs) const { return { x() + rhs.x(), y() + rhs.y(), z() + rhs.z(), w() + rhs.w() }; }
-		inline Vec4 operator-(const Vec4& rhs) const { return { x() - rhs.x(), y() - rhs.y(), z() - rhs.z(), w() - rhs.w() }; }
-		inline Vec4 operator*(const float rhs) const { return { x() * rhs, y() * rhs, z() * rhs, w() * rhs }; }
-		inline Vec4 operator/(const float rhs) const { return { x() / rhs, y() / rhs, z() / rhs, w() / rhs }; }
-		inline Vec4 operator-() const { return { -x(), -y(), -z(), -w() }; }
+		inline Vec4 operator+(const Vec4& rhs) const { return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z(), W() + rhs.W() }; }
+		inline Vec4 operator-(const Vec4& rhs) const { return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z(), W() - rhs.W() }; }
+		inline Vec4 operator*(const float rhs) const { return { X() * rhs, Y() * rhs, Z() * rhs, W() * rhs }; }
+		inline Vec4 operator/(const float rhs) const { return { X() / rhs, Y() / rhs, Z() / rhs, W() / rhs }; }
+		inline Vec4 operator-() const { return { -X(), -Y(), -Z(), -W() }; }
 
-		inline float x() const { return _x; }
-		inline float y() const { return _y; }
-		inline float z() const { return _z; }
-		inline float w() const { return _w; }
-		inline float operator[](const int i) const { return (&_x)[i]; }
-		inline operator const float* () const { return &_x; }
+		inline float X() const { return Comps[0]; }
+		inline float Y() const { return Comps[1]; }
+		inline float Z() const { return Comps[2]; }
+		inline float W() const { return Comps[3]; }
+		inline float operator[](const int i) const { return (&Comps[0])[i]; }
+		inline operator const float* () const { return &Comps[0]; }
 
-		inline float Dot(const Vec4& rhs) const { return x() * rhs.x() + y() * rhs.y() + z() * rhs.z() + w() * rhs.w(); }
+		inline float Dot(const Vec4& rhs) const { return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z() + W() * rhs.W(); }
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
 		inline Vec4 Normalize() const {
@@ -169,24 +162,18 @@ namespace Math
 			return *this;
 		}
 
-		//inline void hoge() {
-		//	DirectX::XMLoadFloat(static_cast<const float*>(*this));
-		//}
-
-		inline Vec4& operator=(const Vec4& rhs) { _x = rhs.x(); _y = rhs.y(); _z = rhs.z(); _w = rhs.w(); return *this; }
-		inline const Vec4& operator+=(const Vec4& rhs) { _x += rhs.x(); _y += rhs.y(); _z += rhs.z(); _w += rhs.w(); return *this; }
-		inline const Vec4& operator-=(const Vec4& rhs) { _x -= rhs.x(); _y -= rhs.y(); _z -= rhs.z(); _w -= rhs.w(); return *this; }
-		inline const Vec4& operator*=(const float rhs) { _x *= rhs; _y *= rhs; _z *= rhs; _w *= rhs; return *this; }
-		inline const Vec4& operator/=(const float rhs) { _x /= rhs; _y /= rhs; _z /= rhs; _w /= rhs; return *this; }
-		inline float& operator[](const int i) { return (&_x)[i]; }
-		inline operator float* () { return &_x; }
+		inline Vec4& operator=(const Vec4& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W(); return *this; }
+		inline const Vec4& operator+=(const Vec4& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); Comps[3] += rhs.W(); return *this; }
+		inline const Vec4& operator-=(const Vec4& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); Comps[3] -= rhs.W(); return *this; }
+		inline const Vec4& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; Comps[3] *= rhs; return *this; }
+		inline const Vec4& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; Comps[3] /= rhs; return *this; }
+		inline float& operator[](const int i) { return Comps[i]; }
+		inline operator float* () { return data(Comps); }
 
 		inline Vec4& ToZero() { return (*this = Zero()); }
 		inline Vec4& ToNormalized() { return (*this = Normalize()); }
 
 	private:
-		float _x, _y, _z, _w;
-		//glm::vec4;
-		//XMFLOAT4;
+		std::array<float, 4> Comps = { 0.0f, 0.0f, 0.0f, 0.0f };
 	};
 }

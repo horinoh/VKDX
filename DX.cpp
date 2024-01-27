@@ -149,7 +149,7 @@ const char* DX::GetFormatChar(const DXGI_FORMAT Format)
 #define DXGI_FORMAT_ENTRY(df) case DXGI_FORMAT_##df: return #df;
 	switch (Format)
 	{
-	default: assert(0 && "Unknown DXGI_FORMAT"); return "";
+	default: VERIFY(false); return "";
 #include "DXFormat.h"
 	}
 #undef DXGI_FORMAT_CASE
@@ -243,7 +243,7 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, 
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = RF
 	};
-	assert(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) && "非 RENDER_TARGET, DEPTH_STENCIL の場合、pOptimizedClearValue を使用しない");
+	VERIFY(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)));
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
 }
 //!< レンダーテクスチャの場合は D3D12_CLEAR_VALUE を指定する部分が通常テクスチャと異なる
@@ -266,7 +266,7 @@ void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* De
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = RF
 	};
-	assert(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) && "RENDER_TARGET, DEPTH_STENCIL の場合、pOptimizedClearValue を使用する");
+	VERIFY(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL));
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
 }
 
@@ -390,7 +390,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	const auto Index = static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) { return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory; })));
 	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
 #endif
-	assert(nullptr != Adapter && "");
+	VERIFY(nullptr != Adapter);
 	Log("[ Selected Adapter ]\n");
 #ifdef DEBUG_STDOUT
 	std::cout << COM_PTR_GET(Adapter);
@@ -407,7 +407,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 			COM_PTR_RESET(DA);
 			if (nullptr != Output) { break; }
 		}
-		assert(nullptr != Output && "");
+		VERIFY(nullptr != Output);
 	}
 	Log("\t\t[ Selected Output ]\n");
 #ifdef DEBUG_STDOUT
@@ -447,7 +447,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 				Log("MaxSupportedFeatureLevel\n");
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
 				switch (FDFL.MaxSupportedFeatureLevel) {
-				default: assert(0 && "Unknown FeatureLevel"); break;
+				default: VERIFY(false); break;
 					D3D_FEATURE_LEVEL_ENTRY(12_2)
 						D3D_FEATURE_LEVEL_ENTRY(12_1)
 						D3D_FEATURE_LEVEL_ENTRY(12_0)
@@ -863,7 +863,7 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS = { .HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0 };
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
-	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_0 && "");
+	VERIFY(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_0);
 
 	COM_PTR<ID3DBlob> ErrorBlob;
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
@@ -891,18 +891,15 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS = { .HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1 };
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
-	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1 && "");
+	VERIFY(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1);
 	
 	COM_PTR<ID3DBlob> ErrorBlob;
-	//!< デスクリプタにバージョンを含めるやり方のみ
-	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = {
-		.Version = D3D_ROOT_SIGNATURE_VERSION_1_1,
-		.Desc_1_1 = D3D12_ROOT_SIGNATURE_DESC1({
-			.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
-			.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
-			.Flags = Flags
-		}),
+	const D3D12_ROOT_SIGNATURE_DESC1 RSD = {
+		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
+		.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
+		.Flags = Flags
 	};
+	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = RSD, };
 	VERIFY_SUCCEEDED(D3D12SerializeVersionedRootSignature(&VRSD, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 	LOG_OK();
 }
@@ -1241,7 +1238,7 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 {
 	PERFORMANCE_COUNTER();
 
-	assert((VS.pShaderBytecode != nullptr && VS.BytecodeLength) && "");
+	VERIFY((VS.pShaderBytecode != nullptr && VS.BytecodeLength));
 
 	//!< キャッシュドパイプラインステート (CachedPipelineState)
 	//!< (VK の VkGraphicsPipelineCreateInfo.basePipelineHandle, basePipelineIndex 相当?)
@@ -1286,14 +1283,14 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 	};
 
 	//!< レンダーターゲット数分だけ必要なもの
-	assert(size(RTBDs) <= _countof(GPSD.BlendState.RenderTarget) && "");
+	VERIFY(size(RTBDs) <= _countof(GPSD.BlendState.RenderTarget));
 	std::ranges::copy(RTBDs, GPSD.BlendState.RenderTarget);
 	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
-	assert((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets) && "");
-	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
+	VERIFY((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets));
+	VERIFY(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats));
 	std::ranges::copy(RTVFormats, GPSD.RTVFormats);
 
-	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
+	VERIFY((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH));
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
 		VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
@@ -1344,10 +1341,10 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 #endif
 		.ViewInstancingDesc = D3D12_VIEW_INSTANCING_DESC({.ViewInstanceCount = 0, .pViewInstanceLocations = nullptr, .Flags = D3D12_VIEW_INSTANCING_FLAG_NONE }),
 	};
-	assert(size(RTBDs) <= _countof(PMSS.BlendState.Value.RenderTarget) && "");
+	VERIFY(size(RTBDs) <= _countof(PMSS.BlendState.Value.RenderTarget));
 	std::ranges::copy(RTBDs, PMSS.BlendState.Value.RenderTarget);
-	assert((false == PMSS.BlendState.Value.IndependentBlendEnable || size(RTBDs) == PMSS.RTVFormats.Value.NumRenderTargets) && "");
-	assert(PMSS.RTVFormats.Value.NumRenderTargets <= _countof(PMSS.RTVFormats.Value.RTFormats) && "");
+	VERIFY((false == PMSS.BlendState.Value.IndependentBlendEnable || size(RTBDs) == PMSS.RTVFormats.Value.NumRenderTargets));
+	VERIFY(PMSS.RTVFormats.Value.NumRenderTargets <= _countof(PMSS.RTVFormats.Value.RTFormats));
 	std::ranges::copy(RTVFormats, PMSS.RTVFormats.Value.RTFormats);
 	
 	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(PMSS), .pPipelineStateSubobjectStream = reinterpret_cast<void*>(&PMSS) };

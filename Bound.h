@@ -21,8 +21,8 @@ namespace Colli
 			return *this;
 		}
 		AABB& Expand(const Vec3& rhs) {
-			Min = { (std::min)(Min.x(), rhs.x()), (std::min)(Min.y(), rhs.y()), (std::min)(Min.z(), rhs.z()) };
-			Max = { (std::max)(Max.x(), rhs.x()), (std::max)(Max.y(), rhs.y()), (std::max)(Max.z(), rhs.z()) };
+			Min = { (std::min)(Min.X(), rhs.X()), (std::min)(Min.Y(), rhs.Y()), (std::min)(Min.Z(), rhs.Z()) };
+			Max = { (std::max)(Max.X(), rhs.X()), (std::max)(Max.Y(), rhs.Y()), (std::max)(Max.Z(), rhs.Z()) };
 			return *this;
 		}
 		AABB& Expand(const AABB& rhs) {
@@ -32,9 +32,9 @@ namespace Colli
 		}
 
 		[[nodiscard]] bool Intersect(const AABB& rhs) const {
-			if (Max.x() < rhs.Min.x() || rhs.Max.x() < Min.x() ||
-				Max.y() < rhs.Min.y() || rhs.Max.y() < Min.y() ||
-				Max.z() < rhs.Min.z() || rhs.Max.z() < Min.z()) {
+			if (Max.X() < rhs.Min.X() || rhs.Max.X() < Min.X() ||
+				Max.Y() < rhs.Min.Y() || rhs.Max.Y() < Min.Y() ||
+				Max.Z() < rhs.Min.Z() || rhs.Max.Z() < Min.Z()) {
 				return false;
 			}
 			return true;
