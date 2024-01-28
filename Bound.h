@@ -5,7 +5,7 @@
 #include "Vec.h"
 using namespace Math;
 
-namespace Colli 
+namespace Collision
 {
 	class AABB
 	{

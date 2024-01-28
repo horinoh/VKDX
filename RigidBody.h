@@ -10,7 +10,7 @@ using namespace Math;
 
 #include "Shape.h"
 
-namespace Phys
+namespace Physics
 {
 	class RigidBody
 	{
@@ -30,6 +30,8 @@ namespace Phys
 		[[nodiscard]] Vec3 GetWorldSpaceCenterOfMass() const { return Position + Rotation.Rotate(GetCenterOfMass()); }
 
 		[[nodiscard]] Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); }
+		[[nodiscard]] Mat3 GetInverseInertiaTensor() const { return InvInertiaTensor; }
+		[[nodiscard]] Mat3 GetWorldSpaceInverseInertiaTensor() const { return ToWorld(GetInverseInertiaTensor()); }
 
 		[[nodiscard]] Vec3 ToLocal(const Vec3& rhs) const {
 			return Rotation.Inverse().Rotate(rhs - GetWorldSpaceCenterOfMass());
@@ -44,9 +46,14 @@ namespace Phys
 		}
 
 		void ApplyGravity(const float DeltaSec) {
+#if 1
 			if (0.0f != InvMass) {
-				LinearVelocity += Graivity * DeltaSec;
+				LinearVelocity += Graivity * DeltaSec;				
 			}
+#else
+			//!< 真面目にやるとこうだが、計算量が増えるだけ
+			ApplyLinearImpulse(Graivity * DeltaSec / InvMass);
+#endif
 		}
 		void ApplyLinearImpulse(const Vec3& Impulse) {
 			if (0.0f != InvMass) {
@@ -55,38 +62,39 @@ namespace Phys
 		}
 		void ApplyAngularImpulse(const Vec3& Impulse) {
 			if (0.0f != InvMass) {
-				//!< w = Inv(I) * AngJ 
-				AngularVelocity += ToWorld(InvInertiaTensor) * Impulse;
+				//!< w = Inv(I) * AngularJ 
+				AngularVelocity += GetWorldSpaceInverseInertiaTensor() * Impulse;
 
-#pragma region 角速度限界値
+				//!< 角速度に限界値を設ける場合
 				//constexpr auto AngVelLim = 30.0f;
 				//if (AngularVelocity.LengthSq() > AngVelLim * AngVelLim) {
 				//	AngularVelocity.ToNormalized();
 				//	AngularVelocity *= AngVelLim;
 				//}
-#pragma endregion
 			}
 		}
 
-		void ApplyImpulse(const Vec3& ImpactPoint, const Vec3& Impulse) {
+		void ApplyTotalImpulse(const Vec3& ImpactPoint, const Vec3& Impulse) {
 			if (0.0f != InvMass) {
 				ApplyLinearImpulse(Impulse);
-				//!< AngJ = r x LinearJ
-				ApplyAngularImpulse((ImpactPoint - GetWorldSpaceCenterOfMass()).Cross(Impulse));
+				//!< AngularJ = Radius x LinearJ
+				const auto Radius = ImpactPoint - GetWorldSpaceCenterOfMass();
+				ApplyAngularImpulse(Radius.Cross(Impulse));
 			}
 		}
 
 		void Update(const float DeltaSec) {
 			if (0.0f != InvMass) {
+				//!< (速度による) 位置の更新
 				{
-					//!< 位置の更新
 					Position += LinearVelocity * DeltaSec;
 				}
 
+				//!< (角速度による) 位置、回転の更新
 				{
-					//!< 角加速度 a = Inv(I) * (w x (I ・ w))
-					const auto WIT = ToWorld(GetInertiaTensor());
-					const auto AngAccel = WIT.Inverse() * (AngularVelocity.Cross(WIT * AngularVelocity));
+					//!< 角加速度 AngAccel = Inv(I) * (w x (I ・ w))
+					const auto WorldInertia = ToWorld(GetInertiaTensor());
+					const auto AngAccel = WorldInertia.Inverse() * (AngularVelocity.Cross(WorldInertia * AngularVelocity));
 					//!< 角速度
 					AngularVelocity += AngAccel * DeltaSec;
 
@@ -95,9 +103,9 @@ namespace Phys
 					const auto DeltaQuat = Quat(DeltaAng, DeltaAng.Length());
 					Rotation = (DeltaQuat * Rotation).Normalize();
 
-					//!< (回転による) 位置の更新
-					const auto WCOM = GetWorldSpaceCenterOfMass();
-					Position = WCOM + DeltaQuat.Rotate(Position - WCOM);
+					//!< 位置の更新
+					const auto WorldCenter = GetWorldSpaceCenterOfMass();
+					Position = WorldCenter + DeltaQuat.Rotate(Position - WorldCenter);
 				}
 			}
 		}
@@ -114,7 +122,7 @@ namespace Phys
 		float Elasticity = 0.5f;
 		float Friction = 0.5f;
 
-		Vec3 Graivity = Vec3(0.0f, -9.8f, 0.0f);
+		inline static const Vec3 Graivity = Vec3(0.0f, -9.8f, 0.0f);
 
 		Shape* Shape = nullptr;
 	};

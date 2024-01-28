@@ -7,7 +7,7 @@ using namespace Math;
 
 #include "Shape.h"
 #include "RigidBody.h"
-using namespace Phys;
+using namespace Physics;
 
 namespace Convex
 {

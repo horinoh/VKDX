@@ -10,9 +10,9 @@ using namespace Math;
 #include "RigidBody.h"
 
 #include "Colli.h"
-using namespace Colli;
+using namespace Collision;
 
-namespace Phys
+namespace Physics
 {
 	class Scene 
 	{
@@ -215,7 +215,7 @@ namespace Phys
 
 				if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
 					Contact Ct;
-					if (Intersect(RbA, RbB, DeltaSec, Ct)) {
+					if (Collision::Intersection::RigidBodies(RbA, RbB, DeltaSec, Ct)) {
 						Contacts.emplace_back(Ct);
 					}
 				}
@@ -232,10 +232,9 @@ namespace Phys
 				for (auto j = i + 1; j < nRb; ++j) {
 					const auto RbA = RigidBodies[i];
 					const auto RbB = RigidBodies[j];
-
 					if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
 						Contact Ct;
-						if (Intersect(RbA, RbB, DeltaSec, Ct)) {
+						if (Collision::Intersection::RigidBodies(RbA, RbB, DeltaSec, Ct)) {
 							Contacts.emplace_back(Ct);
 						}
 					}
@@ -246,12 +245,14 @@ namespace Phys
 		}
 		virtual void Update(const float DeltaSec)
 		{
+			//!< 重力
 			for (auto i : RigidBodies) {
 				i->ApplyGravity(DeltaSec);
 			}
 
+			//!< 衝突 Contacts を収集
 			std::vector<Contact> Contacts;
-#if true
+#if false
 			{
 				std::vector<CollidablePair> CollidablePairs;
 				BroadPhase(CollidablePairs, DeltaSec);
@@ -264,19 +265,21 @@ namespace Phys
 			//!< TOI 毎に時間をスライスして、シミュレーションを進める
 			auto AccumTime = 0.0f;
 			for (auto i : Contacts) {
+				//!< 次の衝突までの時間
 				const auto Delta = i.TimeOfImpact - AccumTime;
 
+				//!< 次の衝突までシミュレーションを進める
 				for (auto j : RigidBodies) {
 					j->Update(Delta);
 				}
 
-				//!< 衝突時の力積の適用
+				//!< 衝突の解決
 				Resolve(i);
 
 				AccumTime += Delta;
 			}
 
-			//!< もう衝突は無いので、残りのシミュレーションを進める
+			//!< 残りのシミュレーションを進める
 			const auto Delta = DeltaSec - AccumTime;
 			if (0.0f < Delta) {
 				for (auto i : RigidBodies) {

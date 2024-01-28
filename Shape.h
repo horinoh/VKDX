@@ -4,9 +4,9 @@
 #include "Bound.h"
 
 using namespace Math;
-using namespace Colli;
+using namespace Collision;
 
-namespace Phys 
+namespace Physics
 {
 	class Shape 
 	{
@@ -21,7 +21,7 @@ namespace Phys
 		};
 		[[nodiscard]] virtual SHAPE GetShapeTyoe() const = 0;
 
-		[[nodiscard]] virtual Vec3 GetCenterOfMass() const = 0;
+		[[nodiscard]] virtual Vec3 GetCenterOfMass() const { return CenterOfMass; }
 		[[nodiscard]] virtual Mat3 GetInertiaTensor() const = 0;
 
 		[[nodiscard]] virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const = 0;
@@ -33,11 +33,14 @@ namespace Phys
 #pragma endregion
 
 	public:
+		Vec3 CenterOfMass = Vec3::Zero();
 		AABB Aabb;
 	};
 
 	class ShapeSphere : public Shape 
 	{
+	private:
+		using Super = Shape;
 	public:
 		ShapeSphere() {}
 		ShapeSphere(const float R) : Radius(R) {}
@@ -45,13 +48,9 @@ namespace Phys
 
 		virtual SHAPE GetShapeTyoe() const override { return SHAPE::SPHERE; }
 
-		virtual Vec3 GetCenterOfMass() const override { return Vec3::Zero(); }
 		virtual Mat3 GetInertiaTensor() const override { 
-			return {
-				{ 2.0f * Radius * Radius / 5.0f, 0.0f, 0.0f }, 
-				{ 0.0f, 2.0f * Radius * Radius / 5.0f, 0.0f },
-				{ 0.0f, 0.0f, 2.0f * Radius * Radius / 5.0f }
-			};
+			//!< ‹…‚ÌŠµ«ƒeƒ“ƒ\ƒ‹ R^2 * 2 / 5  * Identity
+			return Radius * Radius * 2.0f / 5.0f * Mat3::Identity();
 		}
 
 		virtual AABB GetAABB(const Vec3& Pos, [[maybe_unused]] const Quat& Rot) const override {
@@ -70,13 +69,14 @@ namespace Phys
 
 	class ShapeBox : public Shape
 	{
+	private:
+		using Super = Shape;
 	public:
 		ShapeBox() {}
 		virtual ~ShapeBox() {}
 
 		virtual SHAPE GetShapeTyoe() const override { return SHAPE::BOX; }
 
-		virtual Vec3 GetCenterOfMass() const override { return Vec3::Zero(); }
 		virtual Mat3 GetInertiaTensor() const override {
 			const auto W2 = Extent.X() * Extent.X(), H2 = Extent.Y() * Extent.Y(), D2 = Extent.Z() * Extent.Z();
 			return {
@@ -152,13 +152,15 @@ namespace Phys
 
 	class ShapeConvex : public Shape
 	{
+	private:
+		using Super = Shape;
 	public:
 		ShapeConvex() {}
 		virtual ~ShapeConvex() {}
 
 		virtual SHAPE GetShapeTyoe() const override { return SHAPE::CONVEX; }
 
-		virtual Vec3 GetCenterOfMass() const override { return Vec3::Zero(); }
+		virtual Vec3 GetCenterOfMass() const override { return Super::GetCenterOfMass(); }
 		virtual Mat3 GetInertiaTensor() const override {
 			//!< TODO
 			return Mat3::Identity();
