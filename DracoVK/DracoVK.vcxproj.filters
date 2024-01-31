@@ -86,5 +86,11 @@
     <CustomBuild Include="DracoVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="DracoVK_CH.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DracoVK_CH.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

@@ -27,9 +27,10 @@ namespace Physics
 		[[nodiscard]] virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const = 0;
 
 #pragma region GJK
-		//!< 指定の方向(NormalizedDir : 正規化されていること)に一番遠い点を返す
-		[[nodiscard]] virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const = 0;
-		//virtual float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const { return 0.0f; }
+		//!< 指定の方向 (NDir : 正規化されていること) に一番遠い点を返す
+		[[nodiscard]] virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const = 0;
+		//!< 指定の方向に最も速く動いている頂点の速度を返す (長いものは回転により衝突の可能性がある (速度が無くても))
+		[[nodiscard]] virtual float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const { return 0.0f; }
 #pragma endregion
 
 	public:
@@ -57,11 +58,9 @@ namespace Physics
 			return { Pos - Vec3(Radius), Pos + Vec3(Radius) };
 		}
 
-#pragma region GJK
-		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const override {
-			return Pos + NormalizedDir * (Radius + Bias);
+		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const override {
+			return Pos + NDir * (Radius + Bias);
 		}
-#pragma endregion
 
 	public:
 		float Radius = 1.0f;
@@ -78,15 +77,18 @@ namespace Physics
 		virtual SHAPE GetShapeTyoe() const override { return SHAPE::BOX; }
 
 		virtual Mat3 GetInertiaTensor() const override {
+			//!< ボックスの慣性テンソル 1 / 12 * (H^2+D^2,       0,       0)
+			//!<							  (      0, w^2+D^2,       0)
+			//!<							  (      0,       0, W^2+H^2)
 			const auto W2 = Extent.X() * Extent.X(), H2 = Extent.Y() * Extent.Y(), D2 = Extent.Z() * Extent.Z();
 			return {
 				{ (H2 + D2) / 12.0f, 0.0f, 0.0f },
 				{ 0.0f, (W2 + D2) / 12.0f, 0.0f },
-				{ 0.0f, 0.0f, (W2 + D2) / 12.0f }
+				{ 0.0f, 0.0f, (W2 + H2) / 12.0f }
 			};
 		}
 
-		virtual AABB GetAABB(const Vec3& Pos, [[maybe_unused]] const Quat& Rot) const override {
+		virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const override {
 			const std::array Points = {
 				Extent,
 				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
@@ -95,7 +97,8 @@ namespace Physics
 				Vec3(-Extent.X(), Extent.Y(), Extent.Z()),
 				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()),
 				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
-				-Extent };
+				-Extent 
+			};
 
 			AABB Aabb;
 			for (auto& i : Points) {
@@ -105,8 +108,7 @@ namespace Physics
 			return Aabb;
 		}
 
-#pragma region GJK
-		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const override {
+		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const override {
 			const std::array Points = { 
 				Extent,
 				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
@@ -115,16 +117,14 @@ namespace Physics
 				Vec3(-Extent.X(), Extent.Y(), Extent.Z()), 
 				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()), 
 				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
-				-Extent };
-
+				-Extent 
+			};
 			const auto MaxPt = std::ranges::max_element(Points, [&](const auto lhs, const auto rhs) {
-				return NormalizedDir.Dot(Rot.Rotate(lhs) + Pos) < NormalizedDir.Dot(Rot.Rotate(rhs) + Pos);
+				return NDir.Dot(Rot.Rotate(lhs) + Pos) < NDir.Dot(Rot.Rotate(rhs) + Pos);
 			});
-			return *MaxPt + NormalizedDir * Bias;
+			return *MaxPt + NDir * Bias;
 		}
-
-		//!< 指定の方向に最も速く動いている頂点の速度を返す
-		float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const {
+		virtual float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const override {
 			const std::array Points = {
 				Extent,
 				Vec3(Extent.X(), Extent.Y(), -Extent.Z()),
@@ -133,8 +133,8 @@ namespace Physics
 				Vec3(-Extent.X(), Extent.Y(), Extent.Z()),
 				Vec3(-Extent.X(), Extent.Y(), -Extent.Z()),
 				Vec3(-Extent.X(), -Extent.Y(), Extent.Z()),
-				-Extent };
-
+				-Extent 
+			};
 			auto MaxSpeed = 0.0f;
 			for (auto& i : Points) {
 				const auto Speed = Dir.Dot(AngVel.Cross(i - GetCenterOfMass()));
@@ -142,9 +142,7 @@ namespace Physics
 					MaxSpeed = Speed;
 				}
 			}
-			return MaxSpeed;
 		}
-#pragma endregion
 
 	public:
 		Vec3 Extent = Vec3::One();
@@ -162,11 +160,11 @@ namespace Physics
 
 		virtual Vec3 GetCenterOfMass() const override { return Super::GetCenterOfMass(); }
 		virtual Mat3 GetInertiaTensor() const override {
-			//!< TODO
+			//!< #TODO
 			return Mat3::Identity();
 		}
 
-		virtual AABB GetAABB(const Vec3& Pos, [[maybe_unused]] const Quat& Rot) const override {
+		virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const override {
 			AABB Aabb;
 			for (auto& i : Points) {
 				Aabb.Expand(Rot.Rotate(i) + Pos);
@@ -174,13 +172,10 @@ namespace Physics
 			return Aabb;
 		}
 
-#pragma region GJK
-		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const override {
-			return *std::ranges::max_element(Points, [&](const auto lhs, const auto rhs) { return NormalizedDir.Dot(Rot.Rotate(lhs) + Pos) < NormalizedDir.Dot(Rot.Rotate(rhs) + Pos); }) + NormalizedDir * Bias;
+		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const override {
+			return *std::ranges::max_element(Points, [&](const auto lhs, const auto rhs) { return NDir.Dot(Rot.Rotate(lhs) + Pos) < NDir.Dot(Rot.Rotate(rhs) + Pos); }) + NDir * Bias;
 		}
-
-		//!< 指定の方向に最も速く動いている頂点の速度を返す
-		float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const {
+		virtual float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const override {
 			auto MaxSpeed = 0.0f;
 			for (auto& i : Points) {
 				const auto Speed = Dir.Dot(AngVel.Cross(i - GetCenterOfMass()));
@@ -188,9 +183,7 @@ namespace Physics
 					MaxSpeed = Speed;
 				}
 			}
-			return MaxSpeed;
 		}
-#pragma endregion
 
 	public:
 		std::vector<Vec3> Points;

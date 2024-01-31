@@ -162,43 +162,46 @@ namespace Physics
 		{
 			std::vector<BoundEdge> BoundEdges;
 			{
-				//!< 軸に射影した AABB の範囲を計算
+				//!< (ここでは) この軸に射影した AABB の範囲を計算
 				const auto Axis = Vec3(1.0f, 1.0f, 1.0f).Normalize();
 
-				const auto nRb = size(RigidBodies);
-				BoundEdges.reserve(nRb * 2);
-				for (auto i = 0; i < nRb; ++i) {
+				const auto RbCount = size(RigidBodies);
+				BoundEdges.reserve(RbCount * 2);
+				for (auto i = 0; i < RbCount; ++i) {
 					const auto Rb = RigidBodies[i];
 
 					auto Aabb = Rb->Shape->GetAABB(Rb->Position, Rb->Rotation);
 					//!< 速度分 AABB を拡張する
 					Aabb.Expand(Aabb.Min + Rb->LinearVelocity * DeltaSec);
 					Aabb.Expand(Aabb.Max + Rb->LinearVelocity * DeltaSec);
-					//aabb.Expand(aabb.Min - Vec3::Epsilon());
-					//aabb.Expand(aabb.Max + Vec3::Epsilon());
-					//Aabb.Expand(Aabb.Min - Vec3::One() * 0.01f);
-					//Aabb.Expand(Aabb.Max + Vec3::One() * 0.01f);
 
-					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Min), true }));
-					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Max), false }));
+					//!< さらに少し拡張 (取りこぼし防止？)
+					const auto Epsilon = 0.01f;
+					Aabb.Expand(Aabb.Min - Vec3::One() * Epsilon);
+					Aabb.Expand(Aabb.Max + Vec3::One() * Epsilon);
+
+					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Min), true })); //!< 下限
+					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Max), false }));//!< 上限
 				}
+
+				//!< 軸に射影した値でソート
 				std::ranges::sort(BoundEdges, std::ranges::less{}, &BoundEdge::Value);
 			}
 
 			//!< 射影 AABB から、潜在的衝突ペアリストを構築
-			const auto NumBounds = size(BoundEdges);
-			for (auto i = 0; i < NumBounds; ++i) {
+			const auto BoundsCount = size(BoundEdges);
+			for (auto i = 0; i < BoundsCount; ++i) {
 				const auto& A = BoundEdges[i];
-				//!< Min なら Max が見つかるまで探す
-				if (A.isMin) {
-					for (auto j = i + 1; j < NumBounds; ++j) {
+				//!< Min なら対となる Max が見つかるまで探す
+				if (A.IsMin) {
+					for (auto j = i + 1; j < BoundsCount; ++j) {
 						const auto& B = BoundEdges[j];
-						//!< 同じインデックス (==Max) が見つかれば終了
+						//!< 対となる Max (同じインデックス) が見つかれば終了
 						if (A.Index == B.Index) {
 							break;
 						}
-						//!< 潜在的衝突相手
-						if (B.isMin) {
+						//!< 他オブジェクトが見つかった場合は、潜在的衝突相手として収集
+						if (B.IsMin) {
 							CollidablePairs.emplace_back(CollidablePair({ A.Index, B.Index }));
 						}
 					}
@@ -209,13 +212,15 @@ namespace Physics
 		{
 			Contacts.reserve(std::size(CollidablePairs));
 			Contacts.clear();
+
+			//!< 潜在的衝突相手と、実際に衝突しているかを調べる
 			for (auto i : CollidablePairs) {
 				const auto RbA = RigidBodies[i.first];
 				const auto RbB = RigidBodies[i.second];
-
 				if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
 					Contact Ct;
 					if (Collision::Intersection::RigidBodies(RbA, RbB, DeltaSec, Ct)) {
+						//!< 衝突を収集
 						Contacts.emplace_back(Ct);
 					}
 				}
@@ -225,11 +230,11 @@ namespace Physics
 		}
 		virtual void BruteForce(std::vector<Contact>& Contacts, const float DeltaSec)
 		{
-			const auto nRb = size(RigidBodies);
-			Contacts.reserve(nRb * nRb);
+			const auto RbCount = size(RigidBodies);
+			Contacts.reserve(RbCount * RbCount);
 			Contacts.clear();
-			for (auto i = 0; i < nRb; ++i) {
-				for (auto j = i + 1; j < nRb; ++j) {
+			for (auto i = 0; i < RbCount; ++i) {
+				for (auto j = i + 1; j < RbCount; ++j) {
 					const auto RbA = RigidBodies[i];
 					const auto RbB = RigidBodies[j];
 					if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
@@ -240,7 +245,6 @@ namespace Physics
 					}
 				}
 			}
-			//!< TOI でソート
 			std::ranges::sort(Contacts, std::ranges::less{}, &Contact::TimeOfImpact);
 		}
 		virtual void Update(const float DeltaSec)
@@ -252,7 +256,7 @@ namespace Physics
 
 			//!< 衝突 Contacts を収集
 			std::vector<Contact> Contacts;
-#if false
+#if true
 			{
 				std::vector<CollidablePair> CollidablePairs;
 				BroadPhase(CollidablePairs, DeltaSec);

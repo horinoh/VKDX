@@ -13,6 +13,7 @@ namespace Convex
 {
 	using TriangleIndices = std::tuple<int, int, int>;
 	using EdgeIndices = std::pair<int, int>;
+	using UniqueEdgeIndices = std::pair<EdgeIndices, bool>;
 
 	//!< 頂点を「なるべく」包含するような四面体を作成
 	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds)
@@ -48,8 +49,8 @@ namespace Convex
 	[[nodiscard]] static bool IsInternal(const Vec3& Pt, const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds) 
 	{
 		for (auto& i : HullInds) {
+			//!< 少なくとも１つの三角形に対し、正の側にあれば外部点なので早期終了
 			if (Distance::PointTriangle(Pt, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) > 0.0f) {
-				//!< 少なくとも１つの三角形に対し、正の側にあれば外部点なので早期終了
 				return false;
 			}
 		}
@@ -60,31 +61,33 @@ namespace Convex
 	{
 		//!< 内部点を除外
 		{
-			const auto [B, E] = std::ranges::remove_if(Pts, [&](const auto& Pt) { return IsInternal(Pt, HullVerts, HullInds); });
-#ifdef _DEBUG
-			//std::cout << "内部点 : " << std::distance(B, std::end(Pts)) << "削除 (" << std::distance(std::begin(Pts), B) << ")" << std::endl;
-#endif
-			Pts.erase(B, E);
+			//!< 内部点が後方に集まる
+			const auto [Beg, End] = std::ranges::remove_if(Pts, [&](const auto& Pt) {
+				return IsInternal(Pt, HullVerts, HullInds);
+			});
+			//!< 削除実行
+			Pts.erase(Beg, End);
 		}
 
-		//!< 既存点と近接する点は除外
+		//!< 既存点と同一とみなせる点は除外
 		{
-			const auto [B, E] = std::ranges::remove_if(Pts,
-				[&](const auto& Pt) {
-					for (auto& i : HullVerts) {
-						constexpr auto ep = (std::numeric_limits<float>::epsilon)(); //!< 0.001f;
-						if ((i - Pt).LengthSq() < ep * ep) {
-							return true;
-						}
+			//constexpr auto Eps = (std::numeric_limits<float>::epsilon)();
+			constexpr auto Eps = 0.001f;
+
+			//!< 同一とみなせる点が後方に集まる
+			const auto [Beg, End] = std::ranges::remove_if(Pts, [&](const auto& Pt) {
+				for (auto& i : HullVerts) {
+					if ((i - Pt).LengthSq() < Eps * Eps) {
+						return true;
 					}
-					return false;
-				});
-#ifdef _DEBUG
-			//std::cout << "近接点 : " << std::distance(B, std::end(Pts)) << "削除 (" <<  << ")" << std::endl;
-#endif
-			Pts.erase(B, E);
+				}
+				return false;
+			});
+			//!< 削除実行
+			Pts.erase(Beg, End);
 		}
 	}
+	//!< ハイポリを食わせるとかなり時間がかかる上に結局ハイポリの凸包ができるだけなのでコリジョンとして現実的ではない、ローポリを食わせること
 	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds)
 	{
 #ifdef _DEBUG
@@ -100,71 +103,67 @@ namespace Convex
 		//!< 外部点が無くなるまで繰り返す
 		while (!std::empty(External)) {
 #ifdef _DEBUG
-			//std::cout << "残りの頂点=" << size(External) << std::endl;
+			std::cout << "残りの頂点=" << size(External) << std::endl;
 #endif
 			//!< 最遠点を見つける
 			const auto FarIndexOfExternal = Distance::Farthest(External, External[0]);
 			const auto& FarPointOfExternal = External[FarIndexOfExternal];
 
-			//!< 最遠点を向いていない三角形 [begin(), B) と、向いている三角形 [B, end()) に分割
-			const auto [B, E] = std::ranges::partition(HullInds,
-				[&](const auto& i) {
-					return Distance::PointTriangle(FarPointOfExternal, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
-				});
+			//!< 最遠点を向いていない三角形を前方 [begin(), Beg) 、向いている三角形を後方 [Beg, end()) に分割する
+			const auto [Beg, End] = std::ranges::partition(HullInds, [&](const auto& i) {
+				return Distance::PointTriangle(FarPointOfExternal, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
+			});
 
-			//!< 向いている三角形から、ユニークな辺 (他の三角形と辺を共有していない) のみを収集
-			using UniqueEdgeIndices = std::pair<EdgeIndices, bool>;
+			//!< 向いている三角形から、ユニークな辺 (他の三角形と辺を共有していない) のみを収集する
 			std::vector<UniqueEdgeIndices> UniqueEdges;
-			std::for_each(B, std::end(HullInds),
-				[&](const auto& i) {
-					//!< 三角形の３辺
-					const std::array Edges = {
-						EdgeIndices({ std::get<0>(i), std::get<1>(i) }),
-						EdgeIndices({ std::get<1>(i), std::get<2>(i) }),
-						EdgeIndices({ std::get<2>(i), std::get<0>(i) }),
-					};
-					for (auto& i : Edges) {
-						//!< 既出の辺 (逆向き許容) かどうかを調べる
-						const auto It = std::ranges::find_if(UniqueEdges,
-							[&](const auto& rhs) {
-								return (rhs.first.first == i.first && rhs.first.second == i.second) || (rhs.first.first == i.second && rhs.first.second == i.first);
-							});
-						if (std::end(UniqueEdges) == It) {
-							//!< 新規の辺は ユニーク (true) として覚えておく
-							UniqueEdges.emplace_back(UniqueEdgeIndices({ i, true }));
-						}
-						else {
-							//!< 既出の辺は 非ユニーク (false) として更新
-							It->second = false;
-						}
+			std::for_each(Beg, std::end(HullInds), [&](const auto& i) {
+				//!< インデックスが形成する三角形の３辺に対して
+				const std::array Edges = {
+					EdgeIndices({ std::get<0>(i), std::get<1>(i) }),
+					EdgeIndices({ std::get<1>(i), std::get<2>(i) }),
+					EdgeIndices({ std::get<2>(i), std::get<0>(i) }),
+				};
+				for (auto& j : Edges) {
+					//!< 既出の辺 (逆向き許容) かどうかを調べる
+					const auto It = std::ranges::find_if(UniqueEdges, [&](const auto& rhs) {
+						return (rhs.first.first == j.first && rhs.first.second == j.second) || (rhs.first.first == j.second && rhs.first.second == j.first);
+					});
+					if (std::end(UniqueEdges) == It) {
+						//!< 新規の辺は ユニーク (true) として覚えておく
+						UniqueEdges.emplace_back(UniqueEdgeIndices({ j, true }));
+					} else {
+						//!< (既に追加した辺が) 既出の辺となったら 非ユニーク (false) として更新しておく
+						It->second = false;
 					}
-				});
+				}
+			});
 
 			//!< 凸包の更新
 			{
-				//!< (ユニークな辺は収集済みなので) 向いている三角形は削除
-				HullInds.erase(B, std::end(HullInds));
+				//!< ここまで来たら向いている三角形は削除してよい (ユニークな辺は収集済み) 
+				HullInds.erase(Beg, std::end(HullInds));
 
-				//!< 【バーテックス】最遠点を頂点として追加する
+				//!<【バーテックス】最遠点を頂点として追加する
 				HullVerts.emplace_back(FarPointOfExternal);
 
-				//!< 【インデックス】最遠点とユニーク辺からなる三角形群を追加
-				const auto FarIndexOfHull = static_cast<int>(std::size(HullVerts) - 1);
-				//!< ユニークな辺だけを集める
-				const auto [B, E] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { return lhs.second == false; });
-				std::for_each(std::begin(UniqueEdges), B,
-					[&](const auto& i) {
-						HullInds.emplace_back(TriangleIndices({ i.first.first, i.first.second, FarIndexOfHull }));
-					});
-				//UniqueEdges.erase(B, std::end(UniqueEdges));
+				//!<【インデックス】最遠点とユニーク辺からなる三角形群を追加
+				const auto FarIndexOfHull = static_cast<int>(std::size(HullVerts) - 1); //!< (さっき追加した) 最後の要素が最遠点のインデックス
+				//!< 非ユニークな辺は後方に追いやる
+				const auto [Beg1, End1] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { 
+					return lhs.second == false;
+				});
+				//!< ユニークな辺と最遠点からなる三角形を追加
+				std::for_each(std::begin(UniqueEdges), Beg1, [&](const auto& i) {
+					HullInds.emplace_back(TriangleIndices({ i.first.first, i.first.second, FarIndexOfHull }));
+				});
 			}
 
 			//!< 外部点の更新
 			{
-				//!< ここまで済んだら最遠点は削除してよい
+				//!< ここまで済んだら最遠点は削除してよい (next は begin(External) から FarIndexOfExternal 個目のイテレータを返す)
 				External.erase(std::next(std::begin(External), FarIndexOfExternal));
 
-				//!< 更新した凸包に対して内部点の削除
+				//!< 更新した凸包に対して内部点を削除する
 				RemoveInternal(HullVerts, HullInds, External);
 			}
 		}

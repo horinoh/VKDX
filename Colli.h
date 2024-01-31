@@ -15,7 +15,7 @@ namespace Collision
 	{
 		int Index;
 		float Value;
-		bool isMin;
+		bool IsMin;
 	};
 
 	struct Contact
@@ -118,7 +118,7 @@ namespace Collision
 			return true;
 		}
 
-		//!< 剛体 (球 vs 球)
+		//!< 剛体(球) vs 剛体(球)
 		[[nodiscard]] static bool RigidBodySpheres(const RigidBody* RbA, const RigidBody* RbB, const float DeltaSec, Contact& Ct) {
 			const auto SpA = static_cast<const ShapeSphere*>(RbA->Shape);
 			const auto SpB = static_cast<const ShapeSphere*>(RbB->Shape);
@@ -144,7 +144,7 @@ namespace Collision
 			}
 			return false;
 		}
-		//!< 剛体
+		//!< 剛体 vs 剛体
 		[[nodiscard]] static bool RigidBodies(const RigidBody* RbA, const RigidBody* RbB, const float DeltaSec, Contact& Ct) {
 			if (RbA->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE && RbB->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE) {
 				return RigidBodySpheres(RbA, RbB, DeltaSec, Ct);
@@ -210,8 +210,8 @@ namespace Collision
 			}
 		}
 
-		//!< めり込みの追い出し 
-		{
+		//!< めり込みの追い出し (TOI == 0.0f の時点で衝突している場合)
+		if(0.0f == Ct.TimeOfImpact) {
 			//!< 質量により追い出し割合を考慮
 			const auto DistAB = Ct.PointB - Ct.PointA;
 			Ct.RigidBodyA->Position += DistAB * (Ct.RigidBodyA->InvMass / TotalInvMass);
