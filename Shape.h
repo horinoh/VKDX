@@ -100,12 +100,12 @@ namespace Physics
 				-Extent 
 			};
 
-			AABB Aabb;
+			AABB Ab;
 			for (auto& i : Points) {
-				Aabb.Expand(Rot.Rotate(i) + Pos);
+				Ab.Expand(Rot.Rotate(i) + Pos);
 			}
 
-			return Aabb;
+			return Ab;
 		}
 
 		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const override {
@@ -165,11 +165,11 @@ namespace Physics
 		}
 
 		virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const override {
-			AABB Aabb;
+			AABB Ab;
 			for (auto& i : Points) {
-				Aabb.Expand(Rot.Rotate(i) + Pos);
+				Ab.Expand(Rot.Rotate(i) + Pos);
 			}
-			return Aabb;
+			return Ab;
 		}
 
 		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NDir, const float Bias) const override {

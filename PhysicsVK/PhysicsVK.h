@@ -51,7 +51,7 @@ protected:
 					const auto Scl = static_cast<ShapeSphere*>(Rb->Shape)->Radius;
 
 					//!< TRS
-					Tr.World[i] = glm::translate(glm::mat4(1.0f), Pos) * glm::mat4_cast(Rot) * glm::scale(glm::mat4(1.0f), glm::vec3(Scl));
+					Tr.World[i] = glm::scale(glm::translate(glm::mat4(1.0f), Pos) * glm::mat4_cast(Rot), glm::vec3(Scl));
 				}
 			}
 		}

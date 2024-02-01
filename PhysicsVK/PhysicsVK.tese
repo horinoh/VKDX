@@ -45,13 +45,11 @@ layout (location = 2) out int OutInstanceIndex[];
 
 layout (quads, equal_spacing, cw) in;
 void main()
-{
-	//gl_Position = vec4(GetPosition_Sphere(gl_TessCoord.xy) * 0.5f, 1.0f);
-	
-	gl_Position = vec4(GetPosition_Sphere(vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y)) * 0.5f, 1.0f);
+{	
+	gl_Position = vec4(GetPosition_Sphere(gl_TessCoord.xy) * 0.5f, 1.0f);
 	OutNormal = GetNormal_Sphere(gl_TessCoord.xy, gl_Position.xyz);
 	
-//	gl_Position = vec4(GetPosition_Cube(vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y)) * 0.5f, 1.0f);
+//	gl_Position = vec4(GetPosition_Cube(gl_TessCoord.xy) * 0.5f, 1.0f);
 //	OutNormal = GetNormal_Cube(gl_TessCoord.xy, gl_Position.xyz);
 
 	OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);

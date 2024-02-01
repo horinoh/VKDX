@@ -71,13 +71,12 @@ namespace Convex
 
 		//!< 既存点と同一とみなせる点は除外
 		{
-			//constexpr auto Eps = (std::numeric_limits<float>::epsilon)();
-			constexpr auto Eps = 0.001f;
-
+			//constexpr auto Eps2 = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+			constexpr auto Eps2 = 0.001f * 0.001f;
 			//!< 同一とみなせる点が後方に集まる
 			const auto [Beg, End] = std::ranges::remove_if(Pts, [&](const auto& Pt) {
 				for (auto& i : HullVerts) {
-					if ((i - Pt).LengthSq() < Eps * Eps) {
+					if ((i - Pt).LengthSq() < Eps2) {
 						return true;
 					}
 				}
@@ -109,51 +108,56 @@ namespace Convex
 			const auto FarIndexOfExternal = Distance::Farthest(External, External[0]);
 			const auto& FarPointOfExternal = External[FarIndexOfExternal];
 
-			//!< 最遠点を向いていない三角形を前方 [begin(), Beg) 、向いている三角形を後方 [Beg, end()) に分割する
-			const auto [Beg, End] = std::ranges::partition(HullInds, [&](const auto& i) {
-				return Distance::PointTriangle(FarPointOfExternal, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
-			});
-
-			//!< 向いている三角形から、ユニークな辺 (他の三角形と辺を共有していない) のみを収集する
+			//!< 最遠店を向いている三角形 (A とする) と、向いていない三角形 (B とする) の境界となる辺を収集します
 			std::vector<UniqueEdgeIndices> UniqueEdges;
-			std::for_each(Beg, std::end(HullInds), [&](const auto& i) {
-				//!< インデックスが形成する三角形の３辺に対して
-				const std::array Edges = {
-					EdgeIndices({ std::get<0>(i), std::get<1>(i) }),
-					EdgeIndices({ std::get<1>(i), std::get<2>(i) }),
-					EdgeIndices({ std::get<2>(i), std::get<0>(i) }),
-				};
-				for (auto& j : Edges) {
-					//!< 既出の辺 (逆向き許容) かどうかを調べる
-					const auto It = std::ranges::find_if(UniqueEdges, [&](const auto& rhs) {
-						return (rhs.first.first == j.first && rhs.first.second == j.second) || (rhs.first.first == j.second && rhs.first.second == j.first);
-					});
-					if (std::end(UniqueEdges) == It) {
-						//!< 新規の辺は ユニーク (true) として覚えておく
-						UniqueEdges.emplace_back(UniqueEdgeIndices({ j, true }));
-					} else {
-						//!< (既に追加した辺が) 既出の辺となったら 非ユニーク (false) として更新しておく
-						It->second = false;
+			{
+				//!< B を前方 [begin(), Beg)、A を後方 [Beg, end()) に分割する
+				const auto [Beg, End] = std::ranges::partition(HullInds, [&](const auto& i) {
+					return Distance::PointTriangle(FarPointOfExternal, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
+				});
+
+				//!< A と B の境界となる辺を収集する (A の中から他の三角形と辺を共有しないユニークな辺のみを収集すれば良い)
+				std::for_each(Beg, std::end(HullInds), [&](const auto& i) {
+					const std::array Edges = {
+						EdgeIndices({ std::get<0>(i), std::get<1>(i) }),
+						EdgeIndices({ std::get<1>(i), std::get<2>(i) }),
+						EdgeIndices({ std::get<2>(i), std::get<0>(i) }),
+					};
+					for (auto& j : Edges) {
+						//!< 既出の辺かどうかを調べる (真逆でも良い)
+						const auto It = std::ranges::find_if(UniqueEdges, [&](const auto& rhs) {
+							return (rhs.first.first == j.first && rhs.first.second == j.second) || (rhs.first.first == j.second && rhs.first.second == j.first);
+						});
+						if (std::end(UniqueEdges) == It) {
+							//!< 新規の辺なので ユニーク (true) として追加しておく
+							UniqueEdges.emplace_back(UniqueEdgeIndices({ j, true }));
+						}
+						else {
+							//!< (追加済みの辺が) 既出の辺となったら 非ユニーク (false) として情報を更新しておく
+							It->second = false;
+						}
 					}
-				}
-			});
+				});
+				//!< (辺は収集済みなので) ここまで来たら A は削除してよい  
+				HullInds.erase(Beg, std::end(HullInds));
+			}
 
 			//!< 凸包の更新
 			{
-				//!< ここまで来たら向いている三角形は削除してよい (ユニークな辺は収集済み) 
-				HullInds.erase(Beg, std::end(HullInds));
-
 				//!<【バーテックス】最遠点を頂点として追加する
 				HullVerts.emplace_back(FarPointOfExternal);
 
 				//!<【インデックス】最遠点とユニーク辺からなる三角形群を追加
 				const auto FarIndexOfHull = static_cast<int>(std::size(HullVerts) - 1); //!< (さっき追加した) 最後の要素が最遠点のインデックス
 				//!< 非ユニークな辺は後方に追いやる
-				const auto [Beg1, End1] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { 
+				const auto [Beg, End] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { 
 					return lhs.second == false;
 				});
+				//!< 削除実行 (ユニークな辺が残る)
+				UniqueEdges.erase(Beg, std::end(UniqueEdges));
+
 				//!< ユニークな辺と最遠点からなる三角形を追加
-				std::for_each(std::begin(UniqueEdges), Beg1, [&](const auto& i) {
+				std::ranges::for_each(UniqueEdges, [&](const auto& i) {
 					HullInds.emplace_back(TriangleIndices({ i.first.first, i.first.second, FarIndexOfHull }));
 				});
 			}
