@@ -110,13 +110,22 @@ namespace Math
 		inline float Determinant() const {
 			//!< 検算用
 			//glm::determinant(glm::make_mat3(static_cast<const float*>(*this)));
+#if 0
 			return Rows[0][0] * Mat2({ { Rows[1][1], Rows[1][2] }, { Rows[2][1], Rows[2][2] } }).Determinant()
 				- Rows[1][0] * Mat2({ { Rows[0][1], Rows[0][2] }, { Rows[2][1], Rows[2][2] } }).Determinant()
 				+ Rows[2][0] * Mat2({ { Rows[0][1], Rows[0][2] }, { Rows[1][1], Rows[1][2] } }).Determinant();
+#else
+			float Det = 0.0f;
+			for (int j = 0; j < 3; ++j) {
+				Det += Rows[0][j] * Minor(0, j).Determinant() * static_cast<float>(pow(-1, j));
+			}
+			return Det;
+#endif
 		}
 		inline Mat3 Inverse(const float InvDet) const {
 			//!< 検算用
 			//glm::inverse(glm::make_mat3(static_cast<const float*>(*this)));
+#if 0
 			const auto M00 = Mat2({ { Rows[1][1], Rows[1][2] }, { Rows[2][1], Rows[2][2] } }).Determinant();
 			const auto M01 = Mat2({ { Rows[1][0], Rows[1][2] }, { Rows[2][0], Rows[2][2] } }).Determinant();
 			const auto M02 = Mat2({ { Rows[1][0], Rows[1][1] }, { Rows[2][0], Rows[2][1] } }).Determinant();
@@ -134,8 +143,37 @@ namespace Math
 				{ -M01, M11, -M21 },
 				{ M02, -M12, M22 },
 			}) * InvDet;
+#else
+			Mat3 M;
+			for (int i = 0; i < 3; ++i) {
+				for (int j = 0; j < 3; ++j) {
+					M[j][i] = Cofactor(i, j);
+				}
+			}
+			return M * InvDet;
+#endif
 		}
 		inline Mat3 Inverse() const { return Inverse(1.0f / Determinant()); }
+		//!< 小行列 (行または列を取り除いてできる小さい正方行列)
+		inline Mat2 Minor(const int Column, const int Row) const {
+			Mat2 M;
+			int r = 0;
+			for (int j = 0; j < 3; ++j) {
+				if (Row == j) { continue; }
+				int c = 0;
+				for (int i = 0; i < 3; ++i) {
+					if (Column == i) { continue; }
+					M[c][r] = (*this)[i][j];
+					++c;
+				}
+				++r;
+			}
+			return M;
+		}
+		//!< 余因子 小行列式に -1^(i + j) を掛けて得られる
+		inline float Cofactor(const int Column, const int Row) const {
+			return static_cast<float>(pow(-1, Column + 1 + Row + 1)) * Minor(Column, Row).Determinant(); 
+		}
 
 		inline Mat3& operator=(const Mat3& rhs) { Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2]; return *this; }
 		inline const Mat3& operator+=(const Mat3& rhs) { Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; Rows[2] += rhs.Rows[2]; return *this; }
@@ -199,12 +237,21 @@ namespace Math
 			//!< 検算用
 			//glm::determinant(glm::make_mat4(static_cast<const float *>(*this)));
 			//DirectX::XMMatrixDeterminant(DirectX::XMLoadFloat4x4(*this)).m128_f32[0];
+#if 0
 			return Rows[0][0] * Mat3({ { Rows[1][1], Rows[1][2], Rows[1][3] }, { Rows[2][1], Rows[2][2], Rows[2][3] }, { Rows[3][1], Rows[3][2], Rows[3][3] } }).Determinant()
 				- Rows[1][0] * Mat3({ { Rows[0][1], Rows[0][2], Rows[0][3] }, { Rows[2][1], Rows[2][2], Rows[2][3] }, { Rows[3][1], Rows[3][2], Rows[3][3] } }).Determinant()
 				+ Rows[2][0] * Mat3({ { Rows[0][1], Rows[0][2], Rows[0][3] }, { Rows[1][1], Rows[1][2], Rows[1][3] }, { Rows[3][1], Rows[3][2], Rows[3][3] } }).Determinant()
 				+ Rows[3][0] * Mat3({ { Rows[0][1], Rows[0][2], Rows[0][3] }, { Rows[1][1], Rows[1][2], Rows[1][3] }, { Rows[2][1], Rows[2][2], Rows[2][3] } }).Determinant();
+#else
+			float Det = 0.0f;
+			for (int j = 0; j < 4; ++j) {
+				Det += Rows[0][j] * Minor(0, j).Determinant() * static_cast<float>(pow(-1, j));
+			}
+			return Det;
+#endif
 		}
 		inline Mat4 Inverse(const float InvDet) const {
+#if 0
 			const auto M00 = Mat3({ { Rows[1][1], Rows[1][2], Rows[1][3] }, { Rows[2][1], Rows[2][2], Rows[2][3] }, { Rows[3][1], Rows[3][2], Rows[3][3] } }).Determinant();
 			const auto M01 = Mat3({ { Rows[1][0], Rows[1][2], Rows[1][3] }, { Rows[2][0], Rows[2][2], Rows[2][3] }, { Rows[3][0], Rows[3][2], Rows[3][3] } }).Determinant();
 			const auto M02 = Mat3({ { Rows[1][0], Rows[1][1], Rows[1][3] }, { Rows[2][0], Rows[2][1], Rows[2][3] }, { Rows[3][0], Rows[3][1], Rows[3][3] } }).Determinant();
@@ -231,6 +278,15 @@ namespace Math
 				{ M02, -M12, M22, -M32 },
 				{ -M03, M13, -M23, M33 },
 			}) * InvDet;
+#else
+			Mat4 M;
+			for (int i = 0; i < 4; ++i) {
+				for (int j = 0; j < 4; ++j) {
+					M[j][i] = Cofactor(i, j);
+				}
+			}
+			return M * InvDet;
+#endif
 		}
 		inline Mat4 Inverse() const 
 		{
@@ -238,6 +294,26 @@ namespace Math
 			//glm::inverse(glm::make_mat4(static_cast<const float*>(*this)));
 			//DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(*this));
 			return Inverse(1.0f / Determinant());
+		}
+		//!< 小行列 (行または列を取り除いてできる小さい正方行列)
+		inline Mat3 Minor(const int Column, const int Row) const {
+			Mat3 M;
+			int r = 0;
+			for (int j = 0; j < 4; ++j) {
+				if (Row == j) { continue; }
+				int c = 0;
+				for (int i = 0; i < 4; ++i) {
+					if (Column == i) { continue; }
+					M[c][r] = (*this)[i][j];
+					++c;
+				}
+				++r;
+			}
+			return M;
+		}
+		//!< 余因子 小行列式に -1^(i + j) を掛けて得られる
+		inline float Cofactor(const int Column, const int Row) const {
+			return static_cast<float>(pow(-1, Column + 1 + Row + 1)) * Minor(Column, Row).Determinant(); 
 		}
 
 		inline Mat4& operator=(const Mat4& rhs) { Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2]; Rows[3] = rhs.Rows[3]; return *this; }

@@ -331,6 +331,8 @@ public:
 			{
 				//Load(GLTF_PATH / "bunny.gltf");
 				Load(GLTF_PATH / "dragon.gltf");
+				//Load(GLTF_PATH / "Box.glb");
+				//Load(GLTF_PATH / "Sphere.glb");
 			}
 		} Popd();
 	}

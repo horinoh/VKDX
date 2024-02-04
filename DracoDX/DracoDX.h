@@ -65,10 +65,10 @@ public:
 		Load(DRC_PATH / "bunny4.drc");
 		//Load(DRC_PATH / "dragon4.drc");
 #else
-		//Load(DRC_PATH / "bunny.drc");
+		Load(DRC_PATH / "bunny.drc");
 		//Load(DRC_PATH / "dragon.drc");
 		//Load(DRC_SAMPLE_PATH / "car.drc");
-		Load(DRC_SAMPLE_PATH / "bunny_gltf.drc");
+		//Load(DRC_SAMPLE_PATH / "bunny_gltf.drc");
 #endif
 
 #ifdef USE_CONVEXHULL
