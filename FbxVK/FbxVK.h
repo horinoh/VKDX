@@ -58,6 +58,8 @@ public:
 		Load(FBX_PATH / "bunny.FBX");
 		//Load(FBX_PATH / "dragon.FBX");
 		//Load(FBX_PATH / "13100_tokyo23-ku_2020_fbx_3_op" / "bldg" / "lod1" / "53394525_bldg_6677.fbx");
+		//Load(FBX_PATH / "Box.FBX");
+		//Load(FBX_PATH / "Sphere.FBX");
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();

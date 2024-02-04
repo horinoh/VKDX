@@ -102,6 +102,7 @@ namespace Math
 		}
 		inline Vec3 Cross(const Vec3& rhs) const { return Vec3(Y() * rhs.Z() - rhs.Y() * Z(), rhs.X() * Z() - X() * rhs.Z(), X() * rhs.Y() - rhs.X() * Y()); }
 
+		inline Vec3& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
 		inline Vec3& operator=(const Vec3& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); return *this; }
 		inline const Vec3& operator+=(const Vec3& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); return *this; }
 		inline const Vec3& operator-=(const Vec3& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); return *this; }
@@ -162,6 +163,8 @@ namespace Math
 			return *this;
 		}
 
+		inline Vec4& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
+		inline Vec4& operator=(const Vec3& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); return *this; }
 		inline Vec4& operator=(const Vec4& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W(); return *this; }
 		inline const Vec4& operator+=(const Vec4& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); Comps[3] += rhs.W(); return *this; }
 		inline const Vec4& operator-=(const Vec4& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); Comps[3] -= rhs.W(); return *this; }

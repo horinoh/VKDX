@@ -188,10 +188,13 @@ namespace Collision
 		};
 		//!< A, B のサポートポイントの差が、C (A, B のミンコフスキー差) のサポートポイントとなる
 		static [[nodiscard]] SupportPoints GetSupportPoints(const RigidBody* RbA, const RigidBody* RbB, const Vec3& NDir, const float Bias) {
-			return { RbA->Shape->GetSupportPoint(RbA->Position, RbA->Rotation, NDir, Bias), RbB->Shape->GetSupportPoint(RbB->Position, RbB->Rotation, NDir, Bias) };
+			return {
+				RbA->Shape->GetSupportPoint(RbA->Position, RbA->Rotation, NDir, Bias), 
+				RbB->Shape->GetSupportPoint(RbB->Position, RbB->Rotation, -NDir, Bias) 
+			};
 		}
 
-		static [[nodiscard]] bool SimplexSignedVolume2(std::vector<SupportPoints>& Sps, Vec3& Dir, Vec4& OutLambda)
+		static [[nodiscard]] bool SimplexSignedVolume2(const std::vector<SupportPoints>& Sps, Vec3& Dir, Vec4& OutLambda)
 		{
 			//constexpr auto Eps2 = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
@@ -199,21 +202,15 @@ namespace Collision
 			const auto Lambda = SignedVolume(Sps[0].GetDiff(), Sps[1].GetDiff());
 			Dir = -1.0f * (Sps[0].GetDiff() * Lambda[0] + Sps[1].GetDiff() * Lambda[1]);
 			
-			OutLambda[0] = Lambda[0];
-			OutLambda[1] = Lambda[1];
+			OutLambda = Lambda;
 
 			if (Dir.LengthSq() < Eps2) {
 				return true;
 			}
 
-			const auto [Beg, End] = std::ranges::remove_if(Sps, [&](const auto& rhs) {
-				return 0.0f == Lambda[static_cast<int>(IndexOf(Sps, rhs))];
-			});
-			Sps.erase(Beg, End);
-			
 			return false;
 		}
-		static [[nodiscard]] bool SimplexSignedVolume3(std::vector<SupportPoints>& Pts, Vec3& Dir, Vec4& OutLambda)
+		static [[nodiscard]] bool SimplexSignedVolume3(const std::vector<SupportPoints>& Pts, Vec3& Dir, Vec4& OutLambda)
 		{
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
@@ -221,22 +218,15 @@ namespace Collision
 
 			Dir = -1.0f * (Pts[0].GetDiff() * Lambda[0] + Pts[1].GetDiff() * Lambda[1] + Pts[2].GetDiff() * Lambda[2]);
 
-			OutLambda[0] = Lambda[0];
-			OutLambda[1] = Lambda[1];
-			OutLambda[2] = Lambda[2];
+			OutLambda = Lambda;
 
 			if (Dir.LengthSq() < Eps2) {
 				return true;
 			}
 
-			const auto [Beg, End] = std::ranges::remove_if(Pts, [&](const auto& rhs) {
-				return 0.0f == Lambda[static_cast<int>(IndexOf(Pts, rhs))];
-			});
-			Pts.erase(Beg, End);
-
 			return false;
 		}
-		static [[nodiscard]] bool SimplexSignedVolume4(std::vector<SupportPoints>& Pts, Vec3& Dir, Vec4& OutLambda)
+		static [[nodiscard]] bool SimplexSignedVolume4(const std::vector<SupportPoints>& Pts, Vec3& Dir, Vec4& OutLambda)
 		{
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
@@ -245,34 +235,22 @@ namespace Collision
 			//!< Dir の更新
 			Dir = -1.0f * (Pts[0].GetDiff() * Lambda[0] + Pts[1].GetDiff() * Lambda[1] + Pts[2].GetDiff() * Lambda[2] + Pts[3].GetDiff() * Lambda[3]);
 			
-			OutLambda[0] = Lambda[0];
-			OutLambda[1] = Lambda[1];
-			OutLambda[2] = Lambda[2];
-			OutLambda[3] = Lambda[3];
+			OutLambda = Lambda;
 
 			if (Dir.LengthSq() < Eps2) {
 				//!< 原点を含む -> 衝突
 				return true;
 			}
 
-			//!< 0.0f == Lambda[i] となる SimplexPoints[i] は削除
-			const auto [Beg, End] = std::ranges::remove_if(Pts, [&](const auto& rhs) {
-				return 0.0f == Lambda[static_cast<int>(IndexOf(Pts, rhs))];
-			});
-			Pts.erase(Beg, End);
-
 			return false;
 		}
-		static [[nodiscard]] bool SimplexSignedVolumes(std::vector<SupportPoints>& Sps, Vec3& Dir, Vec4& OutLambda)
+		static [[nodiscard]] bool SimplexSignedVolumes(const std::vector<SupportPoints>& Sps, Vec3& Dir, Vec4& OutLambda)
 		{
 			switch (size(Sps)) {
 			case 2: return SimplexSignedVolume2(Sps, Dir, OutLambda);
 			case 3: return SimplexSignedVolume3(Sps, Dir, OutLambda);
 			case 4: return SimplexSignedVolume4(Sps, Dir, OutLambda);
-			default:
-				assert(false && "");
-				return false;
-				break;
+			default: return false;
 			}
 		}
 
@@ -292,14 +270,13 @@ namespace Collision
 			[[nodiscard]] static bool GJK(const RigidBody* RbA, const RigidBody* RbB)
 			{
 				std::vector<SupportPoints> Sps;
-				//!< 4 枠必要
-				Sps.reserve(4);
+				Sps.reserve(4); //!< 4 枠
 
 				//!< (1, 1, 1) 方向のサポートポイントを求める
 				Sps.emplace_back(GetSupportPoints(RbA, RbB, Vec3::One().Normalize(), 0.0f));
 
 				auto Closest = (std::numeric_limits<float>::max)();
-				auto Dir = Sps.back().GetDiff();
+				auto Dir = -Sps.back().GetDiff();
 				do {
 					const auto Pt = GetSupportPoints(RbA, RbB, Dir, 0.0f);
 
@@ -313,11 +290,11 @@ namespace Collision
 					Sps.emplace_back(Pt);
 
 					//!< 新しい点が原点を超えていない場合、原点が内部に含まれない -> 衝突無し
-					if (Dir.Dot(Pt.GetDiff()) >= 0.0f) {
+					if (Dir.Dot(Pt.GetDiff()) < 0.0f) {
 						break;
 					}
 
-					//!< 1, 2, 3-シンプレックス毎の処理
+					//!< 1, 2, 3-シンプレックス毎の処理 (Dir を更新、Lambda を返す)
 					Vec4 Lambda;
 					if (SimplexSignedVolumes(Sps, Dir, Lambda)) {
 						return true;
@@ -332,7 +309,7 @@ namespace Collision
 						break;
 					}
 
-					//!< 有効な Sps (Lambda が 非 0) だけを残す
+					//!< 有効な (Lambda が 非 0) Sps だけを残す
 					const auto [Beg, End] = std::ranges::remove_if(Sps, [&](const auto& rhs) {
 						return 0.0f == Lambda[static_cast<int>(IndexOf(Sps, rhs))];
 					});
