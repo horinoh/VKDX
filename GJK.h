@@ -195,7 +195,6 @@ namespace Collision
 		{
 			//constexpr auto Eps2 = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
-			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
 			const auto Lambda = SignedVolume(Sps[0].GetDiff(), Sps[1].GetDiff());
 			Dir = -1.0f * (Sps[0].GetDiff() * Lambda[0] + Sps[1].GetDiff() * Lambda[1]);
