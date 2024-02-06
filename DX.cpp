@@ -698,7 +698,7 @@ void DX::GetSwapChainResource()
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		auto& SCBB = SwapchainBackBuffers.emplace_back();
+		auto& SCBB = SwapChainBackBuffers.emplace_back();
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SCBB.Resource)));
 
@@ -730,8 +730,8 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
-	for (auto& i : SwapchainBackBuffers) { COM_PTR_RESET(i.Resource); }
-	SwapchainBackBuffers.clear();
+	for (auto& i : SwapChainBackBuffers) { COM_PTR_RESET(i.Resource); }
+	SwapChainBackBuffers.clear();
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);

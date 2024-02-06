@@ -201,7 +201,7 @@ protected:
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();

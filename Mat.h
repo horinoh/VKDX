@@ -5,14 +5,16 @@ namespace Math
 	class Mat2 
 	{
 	public:
-		Mat2() : Rows{ Vec2(1.0f, 0.0f), Vec2(0.0f, 1.0f) } {}
-		Mat2(const Vec2& row0, const Vec2& row1) : Rows{ row0, row1 } {}
+		Mat2() {}
+		Mat2(const Vec2& Row0, const Vec2& Row1) : Rows{ Row0, Row1 } {}
 		Mat2(const Mat2& rhs) : Rows{ rhs.Rows[0], rhs.Rows[1] } {}
 
-		inline static Mat2 Identity() { return { { 1.0f, 0.0f }, { 0.0f, 1.0f } }; }
+		inline static Mat2 Identity() { return Mat2(); }
 		inline static Mat2 Zero() { return { Vec2::Zero(), Vec2::Zero() }; }
 
-		inline bool NearlyEqual(const Mat2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon); }
+		inline bool NearlyEqual(const Mat2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
+			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon); 
+		}
 
 		inline bool operator==(const Mat2& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1]; }
 		inline Mat2 operator+(const Mat2& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1] }; }
@@ -63,20 +65,22 @@ namespace Math
 		inline Mat2& ToIdentity() { return (*this = Identity()); }
 
 	private:
-		std::array<Vec2, 2> Rows;
+		std::array<Vec2, 2> Rows = { Vec2(1.0f, 0.0f), Vec2(0.0f, 1.0f) };
 	};
 
 	class Mat3 
 	{
 	public:
-		Mat3() : Rows{ Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f) } {}
-		Mat3(const Vec3& row0, const Vec3& row1, const Vec3& row2) : Rows{ row0, row1, row2 } {}
+		Mat3() {}
+		Mat3(const Vec3& Row0, const Vec3& Row1, const Vec3& Row2) : Rows{ Row0, Row1, Row2 } {}
 		Mat3(const Mat3& rhs) : Rows{ rhs.Rows[0], rhs.Rows[1], rhs.Rows[2] } {}
 
-		inline static Mat3 Identity() { return { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }; }
+		inline static Mat3 Identity() { return Mat3(); }
 		inline static Mat3 Zero() { return { Vec3::Zero(), Vec3::Zero(), Vec3::Zero() }; }
 
-		inline bool NearlyEqual(const Mat3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon); }
+		inline bool NearlyEqual(const Mat3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
+			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon); 
+		}
 
 		inline bool operator==(const Mat3& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2]; }
 		inline Mat3 operator+(const Mat3& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2] }; }
@@ -186,20 +190,22 @@ namespace Math
 		inline Mat3& ToIdentity() { return (*this = Identity()); }
 
 	private:
-		std::array<Vec3, 3> Rows;
+		std::array<Vec3, 3> Rows = { Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f) };
 	};
 
 	class Mat4
 	{
 	public:
-		Mat4() : Rows{ Vec4(1.0f, 0.0f, 0.0f, 0.0f), Vec4(0.0f, 1.0f, 0.0f, 0.0f), Vec4(0.0f, 0.0f, 1.0f, 0.0f), Vec4(0.0f, 0.0f, 0.0f, 1.0f) } {}
-		Mat4(const Vec4& row0, const Vec4& row1, const Vec4& row2, const Vec4& row3) : Rows{ row0, row1, row2, row3 } {}
+		Mat4() {}
+		Mat4(const Vec4& Row0, const Vec4& Row1, const Vec4& Row2, const Vec4& Row3) : Rows{ Row0, Row1, Row2, Row3 } {}
 		Mat4(const Mat4& rhs) : Rows{ rhs.Rows[0], rhs.Rows[1], rhs.Rows[2], rhs.Rows[3] } {}
 
-		inline static Mat4 Identity() { return { { 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f } }; }
+		inline static Mat4 Identity() { return Mat4(); }
 		inline static Mat4 Zero() { return { Vec4::Zero(), Vec4::Zero(), Vec4::Zero(), Vec4::Zero() }; }
 
-		inline bool NearlyEqual(const Mat4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon) && Rows[3].NearlyEqual(rhs.Rows[3], Epsilon); }
+		inline bool NearlyEqual(const Mat4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
+			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon) && Rows[3].NearlyEqual(rhs.Rows[3], Epsilon); 
+		}
 
 		inline bool operator==(const Mat4& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2] && Rows[3] == rhs.Rows[3]; }
 		inline Mat4 operator+(const Mat4& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2], Rows[3] + rhs.Rows[3] }; }
@@ -288,8 +294,7 @@ namespace Math
 			return M * InvDet;
 #endif
 		}
-		inline Mat4 Inverse() const 
-		{
+		inline Mat4 Inverse() const {
 			//!< ŒŸŽZ—p
 			//glm::inverse(glm::make_mat4(static_cast<const float*>(*this)));
 			//DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(*this));
@@ -328,7 +333,23 @@ namespace Math
 		inline Mat4& ToIdentity() { return (*this = Identity()); }
 
 	private:
-		std::array<Vec4, 4> Rows;
+		std::array<Vec4, 4> Rows = { Vec4(1.0f, 0.0f, 0.0f, 0.0f), Vec4(0.0f, 1.0f, 0.0f, 0.0f), Vec4(0.0f, 0.0f, 1.0f, 0.0f), Vec4(0.0f, 0.0f, 0.0f, 1.0f) };
+	};
+
+	template<size_t N>
+	class Mat 
+	{
+	public:
+	private:
+		std::array<Vec<N>, N> Rows;
+	};
+
+	template<size_t M, size_t N>
+	class _Mat
+	{
+	public:
+	private:
+		std::array<Vec<N>, M> Rows;
 	};
 }
 

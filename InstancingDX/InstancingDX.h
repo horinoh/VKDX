@@ -139,13 +139,13 @@ protected:
 			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(SwapchainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array CHs = { SwapchainBackBuffers[i].Handle };
+				const std::array CHs = { SwapChainBackBuffers[i].Handle };
 				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				DCL->ExecuteBundle(BCL);

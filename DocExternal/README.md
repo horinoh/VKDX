@@ -2,6 +2,12 @@
 
 ## GLTF
  * NuGetPackage で Microsoft.glTF.CPP をインストール
+ 	- min, max 関連でコンパイルエラーになる場合、windows.h より前に NOMINMAX を定義する
+    	~~~
+    	#define NOMINMAX 
+    	#include <windows.h>
+    	~~~
+
  	* リンカエラー 4099 が出る(#pragma では回避できない)ので以下のようにしている 
 		* Configuration Properties - Linker - CommandLine - AdditionalOptions - /ignore:4099
 	* [サンプルプログラム](https://github.com/microsoft/glTF-SDK)

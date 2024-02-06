@@ -707,7 +707,7 @@ protected:
 		COM_PTR<ID3D12Resource> Resource;
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle;
 	}; 
-	std::vector<SwapChainBackBuffer> SwapchainBackBuffers;
+	std::vector<SwapChainBackBuffer> SwapChainBackBuffers;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> DirectCommandAllocators;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> DirectCommandLists;

@@ -181,7 +181,7 @@ namespace Collision
 
 			const Vec3 GetA() const { return std::get<0>(Data); }
 			const Vec3 GetB() const { return std::get<1>(Data); }
-			const Vec3 GetDiff() const { return std::get<2>(Data); }
+			const Vec3 GetC() const { return std::get<2>(Data); }
 
 		private:
 			std::tuple<Vec3, Vec3, Vec3> Data;
@@ -199,8 +199,8 @@ namespace Collision
 			//constexpr auto Eps2 = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
-			const auto Lambda = SignedVolume(Sps[0].GetDiff(), Sps[1].GetDiff());
-			Dir = -1.0f * (Sps[0].GetDiff() * Lambda[0] + Sps[1].GetDiff() * Lambda[1]);
+			const auto Lambda = SignedVolume(Sps[0].GetC(), Sps[1].GetC());
+			Dir = -1.0f * (Sps[0].GetC() * Lambda[0] + Sps[1].GetC() * Lambda[1]);
 			
 			OutLambda = Lambda;
 
@@ -214,9 +214,9 @@ namespace Collision
 		{
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
-			const auto Lambda = SignedVolume(Pts[0].GetDiff(), Pts[1].GetDiff(), Pts[2].GetDiff());
+			const auto Lambda = SignedVolume(Pts[0].GetC(), Pts[1].GetC(), Pts[2].GetC());
 
-			Dir = -1.0f * (Pts[0].GetDiff() * Lambda[0] + Pts[1].GetDiff() * Lambda[1] + Pts[2].GetDiff() * Lambda[2]);
+			Dir = -1.0f * (Pts[0].GetC() * Lambda[0] + Pts[1].GetC() * Lambda[1] + Pts[2].GetC() * Lambda[2]);
 
 			OutLambda = Lambda;
 
@@ -230,10 +230,10 @@ namespace Collision
 		{
 			constexpr auto Eps2 = 0.0001f * 0.00001f;
 
-			const auto Lambda = SignedVolume(Pts[0].GetDiff(), Pts[1].GetDiff(), Pts[2].GetDiff(), Pts[3].GetDiff());
+			const auto Lambda = SignedVolume(Pts[0].GetC(), Pts[1].GetC(), Pts[2].GetC(), Pts[3].GetC());
 
 			//!< Dir の更新
-			Dir = -1.0f * (Pts[0].GetDiff() * Lambda[0] + Pts[1].GetDiff() * Lambda[1] + Pts[2].GetDiff() * Lambda[2] + Pts[3].GetDiff() * Lambda[3]);
+			Dir = -1.0f * (Pts[0].GetC() * Lambda[0] + Pts[1].GetC() * Lambda[1] + Pts[2].GetC() * Lambda[2] + Pts[3].GetC() * Lambda[3]);
 			
 			OutLambda = Lambda;
 
@@ -276,13 +276,13 @@ namespace Collision
 				Sps.emplace_back(GetSupportPoints(RbA, RbB, Vec3::One().Normalize(), 0.0f));
 
 				auto Closest = (std::numeric_limits<float>::max)();
-				auto Dir = -Sps.back().GetDiff();
+				auto Dir = -Sps.back().GetC();
 				do {
 					const auto Pt = GetSupportPoints(RbA, RbB, Dir, 0.0f);
 
 					//!< 既存の点が返るということはもう拡張できない -> 衝突無し
 					if (std::end(Sps) != std::ranges::find_if(Sps, [&](const auto& rhs) {
-						return Pt.GetDiff().NearlyEqual(rhs.GetDiff()); 
+						return Pt.GetC().NearlyEqual(rhs.GetC());
 					})) {
 						break;
 					}
@@ -290,7 +290,7 @@ namespace Collision
 					Sps.emplace_back(Pt);
 
 					//!< 新しい点が原点を超えていない場合、原点が内部に含まれない -> 衝突無し
-					if (Dir.Dot(Pt.GetDiff()) < 0.0f) {
+					if (Dir.Dot(Pt.GetC()) < 0.0f) {
 						break;
 					}
 

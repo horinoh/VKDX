@@ -110,18 +110,16 @@ public:
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-	virtual void PopulateCommandBuffer(const size_t i) override {
+	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];
-		const auto FB = Framebuffers[i];
-
-#pragma region SECONDARY_COMMAND_BUFFER
 		const auto SCB = SecondaryCommandBuffers[i];
+
 		const VkCommandBufferInheritanceInfo CBII = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 			.pNext = nullptr,
 			.renderPass = RP,
 			.subpass = 0,
-			.framebuffer = FB,
+			.framebuffer = VK_NULL_HANDLE,
 			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
 			.pipelineStatistics = 0,
 		};
@@ -145,9 +143,13 @@ public:
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
-#pragma endregion
-
+	}
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto RP = RenderPasses[0];
+		const auto FB = Framebuffers[i];
+		const auto SCB = SecondaryCommandBuffers[i];
 		const auto CB = CommandBuffers[i];
+
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.pNext = nullptr,
@@ -260,6 +262,26 @@ public:
 								std::memcpy(data(Vertices), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Vertices));
 
 								AdjustScale(Vertices, 1.0f);
+							}
+							break;
+							default: break;
+							}
+							break;
+						default: break;
+						}
+					}
+					if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
+					{
+						const auto& Accessor = Document.accessors.Get(AccessorId);
+						//Normals.resize(Accessor.count);
+						switch (Accessor.componentType)
+						{
+						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
+							switch (Accessor.type)
+							{
+							case Microsoft::glTF::AccessorType::TYPE_VEC3:
+							{
+								//std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
 							}
 							break;
 							default: break;

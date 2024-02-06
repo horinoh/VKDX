@@ -459,7 +459,7 @@ protected:
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 		{
-			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 			const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
 
 			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
@@ -545,7 +545,7 @@ protected:
 			{
 				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[Pass]));
 
-				const std::array CHs = { SwapchainBackBuffers[i].Handle };
+				const std::array CHs = { SwapChainBackBuffers[i].Handle };
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr); 
 
 				{

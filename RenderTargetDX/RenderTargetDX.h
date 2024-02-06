@@ -242,7 +242,7 @@ protected:
 		const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(DCL->Reset(DCA, nullptr));
 		{
-			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 			const auto RT = COM_PTR_GET(RenderTextures.back().Resource);
 
 			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
@@ -288,7 +288,7 @@ protected:
 
 				DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-				const std::array CHs = { SwapchainBackBuffers[i].Handle };
+				const std::array CHs = { SwapChainBackBuffers[i].Handle };
 				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				const std::array DHs = { COM_PTR_GET(Heap) };

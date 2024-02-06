@@ -212,7 +212,7 @@ protected:
 		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
 			const auto RS = COM_PTR_GET(RootSignatures[0]);
-			const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 
 			CL->SetGraphicsRootSignature(RS);
 
@@ -224,10 +224,10 @@ protected:
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(SwapchainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 				CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array CHs = { SwapchainBackBuffers[i].Handle };
+				const std::array CHs = { SwapChainBackBuffers[i].Handle };
 				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
 
 				{

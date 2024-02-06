@@ -277,7 +277,7 @@ public:
 				CL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
 				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
-			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapchainBackBuffers[i].Resource));
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainBackBuffers[i].Resource));
 		} VERIFY_SUCCEEDED(CL->Close());
 	}
 };

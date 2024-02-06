@@ -281,14 +281,19 @@ public:
 	template <typename T> static void LogNG(T Str);
 
 public:
-	bool IsPause() const { return ControlFlag.test(0); }
-	void Pause() { ControlFlag.set(0); }
-	void UnPause() { ControlFlag.reset(0); }
+	enum class CONTROL_FLAG : uint8_t {
+		Pause,
+		Step,
+		Count,
+	};
+	bool IsPause() const { return ControlFlag.test(static_cast<size_t>(CONTROL_FLAG::Pause)); }
+	void Pause() { ControlFlag.set(static_cast<size_t>(CONTROL_FLAG::Pause)); }
+	void UnPause() { ControlFlag.reset(static_cast<size_t>(CONTROL_FLAG::Pause)); }
 	void TogglePause() { IsPause() ? UnPause() : Pause(); }
 
-	bool IsStep() const { return ControlFlag.test(1); }
-	void Step() { ControlFlag.set(1); }
-	void UnStep() { ControlFlag.reset(1); }
+	bool IsStep() const { return ControlFlag.test(static_cast<size_t>(CONTROL_FLAG::Step)); }
+	void Step() { ControlFlag.set(static_cast<size_t>(CONTROL_FLAG::Step)); }
+	void UnStep() { ControlFlag.reset(static_cast<size_t>(CONTROL_FLAG::Step)); }
 	bool ProcessStep() {
 		if (IsStep()) {
 			UnStep();

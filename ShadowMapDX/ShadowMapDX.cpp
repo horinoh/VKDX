@@ -267,7 +267,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
-		const auto SCR = COM_PTR_GET(SwapchainBackBuffers[i].Resource);
+		const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
 		const auto IR = COM_PTR_GET(DepthTextures[0].Resource);
 
 		//!< パス0 : (シャドウキャスタ描画用)
