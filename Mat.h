@@ -13,13 +13,26 @@ namespace Math
 		inline static Mat2 Zero() { return { Vec2::Zero(), Vec2::Zero() }; }
 
 		inline bool NearlyEqual(const Mat2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
-			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon); 
+			return std::ranges::equal(Rows, rhs.Rows, [&](const Vec2& l, const Vec2& r) { return l.NearlyEqual(r, Epsilon); });
+			//return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon); 
 		}
 
-		inline bool operator==(const Mat2& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1]; }
-		inline Mat2 operator+(const Mat2& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1] }; }
-		inline Mat2 operator-(const Mat2& rhs) const { return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1] }; }
-		inline Mat2 operator*(const float rhs) const { return { Rows[0] * rhs, Rows[1] * rhs }; }
+		inline bool operator==(const Mat2& rhs) const {
+			return std::ranges::equal(Rows, rhs.Rows);
+			//return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1];
+		}
+		inline Mat2 operator+(const Mat2& rhs) const {
+			Mat2 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::plus()); return r;
+			//return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1] };
+		}
+		inline Mat2 operator-(const Mat2& rhs) const { 
+			Mat2 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::minus()); return r;
+			//return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1] }; 
+		}
+		inline Mat2 operator*(const float rhs) const { 
+			Mat2 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] * rhs, Rows[1] * rhs }; 
+		}
 		inline Vec2 operator*(const Vec2& rhs) const { return { Rows[0].Dot(rhs), Rows[1].Dot(rhs) }; }
 		inline Mat2 operator*(const Mat2& rhs) const {
 			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
@@ -31,7 +44,10 @@ namespace Math
 				{ Rows[1].Dot(c0), Rows[1].Dot(c1) } 
 			};
 		}
-		inline Mat2 operator/(const float rhs) const { return { Rows[0] / rhs, Rows[1] / rhs }; }
+		inline Mat2 operator/(const float rhs) const { 
+			Mat2 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] / rhs, Rows[1] / rhs };
+		}
 
 		inline const Vec2& operator[](const int i) const { return Rows[i]; }
 		inline operator const float* () const { return static_cast<const float*>(Rows[0]); }
@@ -54,11 +70,31 @@ namespace Math
 		}
 		inline Mat2 Inverse() const { Inverse(1.0f / Determinant()); }
 
-		inline Mat2& operator=(const Mat2& rhs) { Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; return *this; }
-		inline const Mat2& operator+=(const Mat2& rhs) { Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; return *this; }
-		inline const Mat2& operator-=(const Mat2& rhs) { Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; return *this; }
-		inline const Mat2& operator*=(const float rhs) { Rows[0] *= rhs; Rows[1] *= rhs; return *this; }
-		inline const Mat2& operator/=(const float rhs) { Rows[0] /= rhs; Rows[1] /= rhs; return *this; }
+		inline Mat2& operator=(const Mat2& rhs) { 
+			std::ranges::copy(rhs.Rows, std::begin(Rows));
+			//Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; 
+			return *this; 
+		}
+		inline const Mat2& operator+=(const Mat2& rhs) {
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::plus());
+			//Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1];
+			return *this;
+		}
+		inline const Mat2& operator-=(const Mat2& rhs) {
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::minus());
+			//Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; 
+			return *this;
+		}
+		inline const Mat2& operator*=(const float rhs) {
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Rows[0] *= rhs; Rows[1] *= rhs;
+			return *this;
+		}
+		inline const Mat2& operator/=(const float rhs) {
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Rows[0] /= rhs; Rows[1] /= rhs; 
+			return *this;
+		}
 		inline Vec2& operator[](const int i) { return Rows[i]; }
 
 		inline Mat2& ToZero() { return (*this = Zero()); }
@@ -79,13 +115,26 @@ namespace Math
 		inline static Mat3 Zero() { return { Vec3::Zero(), Vec3::Zero(), Vec3::Zero() }; }
 
 		inline bool NearlyEqual(const Mat3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
-			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon); 
+			return std::ranges::equal(Rows, rhs.Rows, [&](const Vec3& l, const Vec3& r) { return l.NearlyEqual(r, Epsilon); });
+			//return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon); 
 		}
 
-		inline bool operator==(const Mat3& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2]; }
-		inline Mat3 operator+(const Mat3& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2] }; }
-		inline Mat3 operator-(const Mat3& rhs) const { return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1], Rows[2] - rhs.Rows[2] }; }
-		inline Mat3 operator*(const float rhs) const { return { Rows[0] * rhs, Rows[1] * rhs, Rows[2] * rhs }; }
+		inline bool operator==(const Mat3& rhs) const { 
+			return std::ranges::equal(Rows, rhs.Rows);
+			//return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2];
+		}
+		inline Mat3 operator+(const Mat3& rhs) const { 
+			Mat3 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::plus()); return r;
+			//return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2] }; 
+		}
+		inline Mat3 operator-(const Mat3& rhs) const { 
+			Mat3 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::minus()); return r;
+			//return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1], Rows[2] - rhs.Rows[2] };
+		}
+		inline Mat3 operator*(const float rhs) const {
+			Mat3 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] * rhs, Rows[1] * rhs, Rows[2] * rhs }; 
+		}
 		inline Vec3 operator*(const Vec3& rhs) const { return { Rows[0].Dot(rhs), Rows[1].Dot(rhs), Rows[2].Dot(rhs) }; }
 		inline Mat3 operator*(const Mat3& rhs) const {
 			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
@@ -99,7 +148,10 @@ namespace Math
 				{ Rows[2].Dot(c0), Rows[2].Dot(c1), Rows[2].Dot(c2) } 
 			};
 		}
-		inline Mat3 operator/(const float rhs) const { return { Rows[0] / rhs, Rows[1] / rhs, Rows[2] / rhs }; }
+		inline Mat3 operator/(const float rhs) const { 
+			Mat3 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] / rhs, Rows[1] / rhs, Rows[2] / rhs };
+		}
 
 		inline const Vec3& operator[](const int i) const { return Rows[i]; }
 		inline operator const float* () const { return static_cast<const float*>(Rows[0]); }
@@ -179,11 +231,35 @@ namespace Math
 			return static_cast<float>(pow(-1, Column + 1 + Row + 1)) * Minor(Column, Row).Determinant(); 
 		}
 
-		inline Mat3& operator=(const Mat3& rhs) { Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2]; return *this; }
-		inline const Mat3& operator+=(const Mat3& rhs) { Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; Rows[2] += rhs.Rows[2]; return *this; }
-		inline const Mat3& operator-=(const Mat3& rhs) { Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; Rows[2] -= rhs.Rows[2]; return *this; }
-		inline const Mat3& operator*=(const float rhs) { Rows[0] *= rhs; Rows[1] *= rhs; Rows[2] *= rhs; return *this; }
-		inline const Mat3& operator/=(const float rhs) { Rows[0] /= rhs; Rows[1] /= rhs; Rows[2] /= rhs; return *this; }
+		inline Mat3& operator=(const Mat2& rhs) {
+			Rows[0] = rhs[0]; Rows[1] = rhs[1];
+			return *this;
+		}
+		inline Mat3& operator=(const Mat3& rhs) { 
+			std::ranges::copy(rhs.Rows, std::begin(Rows));
+			//Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2];
+			return *this; 
+		}
+		inline const Mat3& operator+=(const Mat3& rhs) { 
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::plus());
+			//Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; Rows[2] += rhs.Rows[2];
+			return *this; 
+		}
+		inline const Mat3& operator-=(const Mat3& rhs) {
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::minus());
+			//Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; Rows[2] -= rhs.Rows[2];
+			return *this; 
+		}
+		inline const Mat3& operator*=(const float rhs) { 
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Rows[0] *= rhs; Rows[1] *= rhs; Rows[2] *= rhs;
+			return *this; 
+		}
+		inline const Mat3& operator/=(const float rhs) { 
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Rows[0] /= rhs; Rows[1] /= rhs; Rows[2] /= rhs;
+			return *this;
+		}
 		inline Vec3& operator[](const int i) { return Rows[i]; }
 
 		inline Mat3& ToZero() { return (*this = Zero()); }
@@ -204,13 +280,26 @@ namespace Math
 		inline static Mat4 Zero() { return { Vec4::Zero(), Vec4::Zero(), Vec4::Zero(), Vec4::Zero() }; }
 
 		inline bool NearlyEqual(const Mat4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
-			return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon) && Rows[3].NearlyEqual(rhs.Rows[3], Epsilon); 
+			return std::ranges::equal(Rows, rhs.Rows, [&](const Vec4& l, const Vec4& r) { return l.NearlyEqual(r, Epsilon); });
+			//return Rows[0].NearlyEqual(rhs.Rows[0], Epsilon) && Rows[1].NearlyEqual(rhs.Rows[1], Epsilon) && Rows[2].NearlyEqual(rhs.Rows[2], Epsilon) && Rows[3].NearlyEqual(rhs.Rows[3], Epsilon); 
 		}
 
-		inline bool operator==(const Mat4& rhs) const { return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2] && Rows[3] == rhs.Rows[3]; }
-		inline Mat4 operator+(const Mat4& rhs) const { return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2], Rows[3] + rhs.Rows[3] }; }
-		inline Mat4 operator-(const Mat4& rhs) const { return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1], Rows[2] - rhs.Rows[2], Rows[3] - rhs.Rows[3] }; }
-		inline Mat4 operator*(const float rhs) const { return { Rows[0] * rhs, Rows[1] * rhs, Rows[2] * rhs, Rows[3] * rhs }; }
+		inline bool operator==(const Mat4& rhs) const { 
+			return std::ranges::equal(Rows, rhs.Rows);
+			//return Rows[0] == rhs.Rows[0] && Rows[1] == rhs.Rows[1] && Rows[2] == rhs.Rows[2] && Rows[3] == rhs.Rows[3]; 
+		}
+		inline Mat4 operator+(const Mat4& rhs) const { 
+			Mat4 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::plus()); return r;
+			//return { Rows[0] + rhs.Rows[0], Rows[1] + rhs.Rows[1], Rows[2] + rhs.Rows[2], Rows[3] + rhs.Rows[3] }; 
+		}
+		inline Mat4 operator-(const Mat4& rhs) const {
+			Mat4 r; std::ranges::transform(Rows, rhs.Rows, std::begin(r.Rows), std::minus()); return r;
+			//return { Rows[0] - rhs.Rows[0], Rows[1] - rhs.Rows[1], Rows[2] - rhs.Rows[2], Rows[3] - rhs.Rows[3] };
+		}
+		inline Mat4 operator*(const float rhs) const { 
+			Mat4 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] * rhs, Rows[1] * rhs, Rows[2] * rhs, Rows[3] * rhs }; 
+		}
 		inline Vec4 operator*(const Vec4& rhs) const { return { Rows[0].Dot(rhs), Rows[1].Dot(rhs), Rows[2].Dot(rhs), Rows[3].Dot(rhs) }; }
 		inline Mat4 operator*(const Mat4& rhs) const {
 			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
@@ -226,7 +315,10 @@ namespace Math
 				{ Rows[3].Dot(c0), Rows[3].Dot(c1), Rows[3].Dot(c2), Rows[3].Dot(c3) } 
 			};
 		}
-		inline Mat4 operator/(const float rhs) const { return { Rows[0] / rhs, Rows[1] / rhs, Rows[2] / rhs, Rows[3] / rhs }; }
+		inline Mat4 operator/(const float rhs) const { 
+			Mat4 r; std::ranges::transform(Rows, std::begin(r.Rows), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { Rows[0] / rhs, Rows[1] / rhs, Rows[2] / rhs, Rows[3] / rhs }; 
+		}
 
 		inline const Vec4& operator[](const int i) const { return Rows[i]; }
 		inline operator const float* () const { return static_cast<const float*>(Rows[0]); }
@@ -321,11 +413,39 @@ namespace Math
 			return static_cast<float>(pow(-1, Column + 1 + Row + 1)) * Minor(Column, Row).Determinant(); 
 		}
 
-		inline Mat4& operator=(const Mat4& rhs) { Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2]; Rows[3] = rhs.Rows[3]; return *this; }
-		inline const Mat4& operator+=(const Mat4& rhs) { Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; Rows[2] += rhs.Rows[2]; Rows[3] += rhs.Rows[3]; return *this; }
-		inline const Mat4& operator-=(const Mat4& rhs) { Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; Rows[2] -= rhs.Rows[2]; Rows[3] -= rhs.Rows[3]; return *this; }
-		inline const Mat4& operator*=(const float rhs) { Rows[0] *= rhs; Rows[1] *= rhs; Rows[2] *= rhs; Rows[3] *= rhs; return *this; }
-		inline const Mat4& operator/=(const float rhs) { Rows[0] /= rhs; Rows[1] /= rhs; Rows[2] /= rhs; Rows[3] /= rhs; return *this; }
+		inline Mat4& operator=(const Mat2& rhs) {
+			Rows[0] = rhs[0]; Rows[1] = rhs[1];
+			return *this;
+		}
+		inline Mat4& operator=(const Mat3& rhs) {
+			Rows[0] = rhs[0]; Rows[1] = rhs[1]; Rows[2] = rhs[2];
+			return *this;
+		}
+		inline Mat4& operator=(const Mat4& rhs) { 
+			std::ranges::copy(rhs.Rows, std::begin(Rows));
+			//Rows[0] = rhs.Rows[0]; Rows[1] = rhs.Rows[1]; Rows[2] = rhs.Rows[2]; Rows[3] = rhs.Rows[3];
+			return *this; 
+		}
+		inline const Mat4& operator+=(const Mat4& rhs) { 
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::plus());
+			//Rows[0] += rhs.Rows[0]; Rows[1] += rhs.Rows[1]; Rows[2] += rhs.Rows[2]; Rows[3] += rhs.Rows[3];
+			return *this; 
+		}
+		inline const Mat4& operator-=(const Mat4& rhs) { 
+			std::ranges::transform(Rows, rhs.Rows, std::begin(Rows), std::minus());
+			//Rows[0] -= rhs.Rows[0]; Rows[1] -= rhs.Rows[1]; Rows[2] -= rhs.Rows[2]; Rows[3] -= rhs.Rows[3];
+			return *this; 
+		}
+		inline const Mat4& operator*=(const float rhs) {
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Rows[0] *= rhs; Rows[1] *= rhs; Rows[2] *= rhs; Rows[3] *= rhs;
+			return *this; 
+		}
+		inline const Mat4& operator/=(const float rhs) { 
+			std::ranges::transform(Rows, std::begin(Rows), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Rows[0] /= rhs; Rows[1] /= rhs; Rows[2] /= rhs; Rows[3] /= rhs;
+			return *this; 
+		}
 		inline Vec4& operator[](const int i) { return Rows[i]; }
 		inline operator float* () { return static_cast<float*>(Rows[0]); }
 

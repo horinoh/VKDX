@@ -177,7 +177,7 @@ namespace Collision
 		class SupportPoints
 		{
 		public:
-			SupportPoints(const Vec3& A, const Vec3& B) : Data({ A, B, B - A }) { }
+			SupportPoints(const Vec3& A, const Vec3& B) : Data({ A, B, A - B }) { }
 
 			const Vec3 GetA() const { return std::get<0>(Data); }
 			const Vec3 GetB() const { return std::get<1>(Data); }

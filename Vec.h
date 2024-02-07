@@ -1,5 +1,7 @@
 #pragma once
 
+#include <numeric>
+
 namespace Math 
 {
 	class Vec2
@@ -18,23 +20,45 @@ namespace Math
 		inline static Vec2 Max() { return Vec2((std::numeric_limits<float>::max)()); }
 
 		inline bool NearlyEqual(const Vec2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const {
-			return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon; 
+			return std::ranges::equal(Comps, rhs.Comps, [&](const float l, const float r) { return std::abs(l - r) < Epsilon; });
+			//return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon; 
 		}
 
-		inline bool operator==(const Vec2& rhs) const { return X() == rhs.X() && Y() == rhs.Y(); }
+		inline bool operator==(const Vec2& rhs) const { 
+			return std::ranges::equal(Comps, rhs.Comps);
+			//return X() == rhs.X() && Y() == rhs.Y();
+		}
 		inline bool operator!=(const Vec2& rhs) const { return !(*this == rhs); }
-		inline Vec2 operator+(const Vec2& rhs) const { return { X() + rhs.X(), Y() + rhs.Y() }; }
-		inline Vec2 operator-(const Vec2& rhs) const { return { X() - rhs.X(), Y() - rhs.Y() }; }
-		inline Vec2 operator*(const float rhs) const { return { X() * rhs, Y() * rhs }; }
-		inline Vec2 operator/(const float rhs) const { return { X() / rhs, Y() / rhs }; }
-		inline Vec2 operator-() const { return { -X(), -Y() }; }
+		inline Vec2 operator+(const Vec2& rhs) const {
+			Vec2 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::plus()); return r;
+			//return { X() + rhs.X(), Y() + rhs.Y() }; 
+		}
+		inline Vec2 operator-(const Vec2& rhs) const {
+			Vec2 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::minus()); return r;
+			//return { X() - rhs.X(), Y() - rhs.Y() };
+		}
+		inline Vec2 operator*(const float rhs) const { 
+			Vec2 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { X() * rhs, Y() * rhs };
+		}
+		inline Vec2 operator/(const float rhs) const { 
+			Vec2 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { X() / rhs, Y() / rhs }; 
+		}
+		inline Vec2 operator-() const {
+			Vec2 r; std::ranges::transform(Comps, std::begin(r.Comps), std::negate()); return r;
+			//return { -X(), -Y() }; 
+		}
 		
 		inline float X() const { return Comps[0]; }
 		inline float Y() const { return Comps[1]; }
 		inline float operator[](const int i) const { return Comps[i]; }
 		inline operator const float* () const { return data(Comps); }
 
-		inline float Dot(const Vec2& rhs) const { return X() * rhs.X() + Y() * rhs.Y(); }
+		inline float Dot(const Vec2& rhs) const { 
+			return std::inner_product(std::begin(Comps), std::end(Comps), std::begin(rhs.Comps), 0.0f);
+			//return X() * rhs.X() + Y() * rhs.Y();
+		}
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
 		inline Vec2 Normalize() const {
@@ -45,11 +69,31 @@ namespace Math
 			return *this;
 		}
 
-		inline Vec2& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
-		inline const Vec2& operator+=(const Vec2& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); return *this; }
-		inline const Vec2& operator-=(const Vec2& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); return *this; }
-		inline const Vec2& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; return *this; }
-		inline const Vec2& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; return *this; }
+		inline Vec2& operator=(const Vec2& rhs) {
+			std::ranges::copy(rhs.Comps, std::begin(Comps));
+			//Comps[0] = rhs.X(); Comps[1] = rhs.Y(); 
+			return *this; 
+		}
+		inline const Vec2& operator+=(const Vec2& rhs) {
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::plus());
+			//Comps[0] += rhs.X(); Comps[1] += rhs.Y(); 
+			return *this;
+		}
+		inline const Vec2& operator-=(const Vec2& rhs) { 
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::minus());
+			//Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); 
+			return *this;
+		}
+		inline const Vec2& operator*=(const float rhs) { 
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Comps[0] *= rhs; Comps[1] *= rhs;
+			return *this; 
+		}
+		inline const Vec2& operator/=(const float rhs) { 
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Comps[0] /= rhs; Comps[1] /= rhs;
+			return *this; 
+		}
 		inline float& operator[](const int i) { return Comps[i]; }
 		inline operator float* () { return data(Comps); }
 
@@ -77,16 +121,35 @@ namespace Math
 		inline static Vec3 Max() { return Vec3((std::numeric_limits<float>::max)()); }
 
 		inline bool NearlyEqual(const Vec3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const {
-			return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon;
+			return std::ranges::equal(Comps, rhs.Comps, [&](const float l, const float r) { return std::abs(l - r) < Epsilon; });
+			//return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon;
 		}
 
-		inline bool operator==(const Vec3& rhs) const { return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z(); }
+		inline bool operator==(const Vec3& rhs) const {
+			return std::ranges::equal(Comps, rhs.Comps);
+			//return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z(); 
+		}
 		inline bool operator!=(const Vec3& rhs) const { return !(*this == rhs); }
-		inline Vec3 operator+(const Vec3& rhs) const { return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z() }; }
-		inline Vec3 operator-(const Vec3& rhs) const { return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z() }; }
-		inline Vec3 operator*(const float rhs) const { return { X() * rhs, Y() * rhs, Z() * rhs }; }
-		inline Vec3 operator/(const float rhs) const { return { X() / rhs, Y() / rhs, Z() / rhs }; }
-		inline Vec3 operator-() const { return { -X(), -Y(), -Z() }; }
+		inline Vec3 operator+(const Vec3& rhs) const { 
+			Vec3 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::plus()); return r;
+			//return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z() }; 
+		}
+		inline Vec3 operator-(const Vec3& rhs) const {
+			Vec3 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::minus()); return r;
+			//return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z() };
+		}
+		inline Vec3 operator*(const float rhs) const {
+			Vec3 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { X() * rhs, Y() * rhs, Z() * rhs }; 
+		}
+		inline Vec3 operator/(const float rhs) const { 
+			Vec3 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { X() / rhs, Y() / rhs, Z() / rhs }; 
+		}
+		inline Vec3 operator-() const { 
+			Vec3 r; std::ranges::transform(Comps, std::begin(r.Comps), std::negate()); return r;
+			//return { -X(), -Y(), -Z() }; 
+		}
 
 		inline float X() const { return Comps[0]; }
 		inline float Y() const { return Comps[1]; }
@@ -94,7 +157,10 @@ namespace Math
 		inline float operator[](const int i) const { return Comps[i]; }
 		inline operator const float* () const { return data(Comps); }
 
-		inline float Dot(const Vec3& rhs) const { return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z(); }
+		inline float Dot(const Vec3& rhs) const { 
+			return std::inner_product(std::begin(Comps), std::end(Comps), std::begin(rhs.Comps), 0.0f);
+			//return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z();
+		}
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrt(LengthSq()); }
 		inline Vec3 Normalize() const {
@@ -106,12 +172,35 @@ namespace Math
 		}
 		inline Vec3 Cross(const Vec3& rhs) const { return Vec3(Y() * rhs.Z() - rhs.Y() * Z(), rhs.X() * Z() - X() * rhs.Z(), X() * rhs.Y() - rhs.X() * Y()); }
 
-		inline Vec3& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
-		inline Vec3& operator=(const Vec3& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); return *this; }
-		inline const Vec3& operator+=(const Vec3& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); return *this; }
-		inline const Vec3& operator-=(const Vec3& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); return *this; }
-		inline const Vec3& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; return *this; }
-		inline const Vec3& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; return *this; }
+		inline Vec3& operator=(const Vec2& rhs) { 
+			Comps[0] = rhs.X(); Comps[1] = rhs.Y(); 
+			return *this; 
+		}
+		inline Vec3& operator=(const Vec3& rhs) {
+			std::ranges::copy(rhs.Comps, std::begin(Comps));
+			//Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); 
+			return *this; 
+		}
+		inline const Vec3& operator+=(const Vec3& rhs) { 
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::plus());
+			//Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); 
+			return *this; 
+		}
+		inline const Vec3& operator-=(const Vec3& rhs) {
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::minus());
+			//Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z();
+			return *this; 
+		}
+		inline const Vec3& operator*=(const float rhs) { 
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs;
+			return *this;
+		}
+		inline const Vec3& operator/=(const float rhs) {
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs;
+			return *this;
+		}
 		inline float& operator[](const int i) { return Comps[i]; }
 		inline operator float* () { return data(Comps); }
 
@@ -140,16 +229,35 @@ namespace Math
 		inline static Vec4 Max() { return Vec4((std::numeric_limits<float>::max)()); }
 
 		inline bool NearlyEqual(const Vec4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { 
-			return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon && std::abs(W() - rhs.W()) < Epsilon; 
+			return std::ranges::equal(Comps, rhs.Comps, [&](const float l, const float r) { return std::abs(l - r) < Epsilon; });
+			//return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon && std::abs(W() - rhs.W()) < Epsilon; 
 		}
 
-		inline bool operator==(const Vec4& rhs) const { return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z() && W() == rhs.W(); }
+		inline bool operator==(const Vec4& rhs) const {
+			return std::ranges::equal(Comps, rhs.Comps);
+			//return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z() && W() == rhs.W(); 
+		}
 		inline bool operator!=(const Vec4& rhs) const { return !(*this == rhs); }
-		inline Vec4 operator+(const Vec4& rhs) const { return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z(), W() + rhs.W() }; }
-		inline Vec4 operator-(const Vec4& rhs) const { return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z(), W() - rhs.W() }; }
-		inline Vec4 operator*(const float rhs) const { return { X() * rhs, Y() * rhs, Z() * rhs, W() * rhs }; }
-		inline Vec4 operator/(const float rhs) const { return { X() / rhs, Y() / rhs, Z() / rhs, W() / rhs }; }
-		inline Vec4 operator-() const { return { -X(), -Y(), -Z(), -W() }; }
+		inline Vec4 operator+(const Vec4& rhs) const { 
+			Vec4 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::plus()); return r;
+			//return { X() + rhs.X(), Y() + rhs.Y(), Z() + rhs.Z(), W() + rhs.W() };
+		}
+		inline Vec4 operator-(const Vec4& rhs) const {
+			Vec4 r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::minus()); return r;
+			//return { X() - rhs.X(), Y() - rhs.Y(), Z() - rhs.Z(), W() - rhs.W() };
+		}
+		inline Vec4 operator*(const float rhs) const {
+			Vec4 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+			//return { X() * rhs, Y() * rhs, Z() * rhs, W() * rhs };
+		}
+		inline Vec4 operator/(const float rhs) const {
+			Vec4 r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+			//return { X() / rhs, Y() / rhs, Z() / rhs, W() / rhs }; 
+		}
+		inline Vec4 operator-() const { 
+			Vec4 r; std::ranges::transform(Comps, std::begin(r.Comps), std::negate()); return r;
+			//return { -X(), -Y(), -Z(), -W() };
+		}
 
 		inline float X() const { return Comps[0]; }
 		inline float Y() const { return Comps[1]; }
@@ -158,7 +266,10 @@ namespace Math
 		inline float operator[](const int i) const { return Comps[i]; }
 		inline operator const float* () const { return data(Comps); }
 
-		inline float Dot(const Vec4& rhs) const { return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z() + W() * rhs.W(); }
+		inline float Dot(const Vec4& rhs) const { 
+			return std::inner_product(std::begin(Comps), std::end(Comps), std::begin(rhs.Comps), 0.0f);
+			//return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z() + W() * rhs.W();
+		}
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
 		inline Vec4 Normalize() const {
@@ -169,13 +280,39 @@ namespace Math
 			return *this;
 		}
 
-		inline Vec4& operator=(const Vec2& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); return *this; }
-		inline Vec4& operator=(const Vec3& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); return *this; }
-		inline Vec4& operator=(const Vec4& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W(); return *this; }
-		inline const Vec4& operator+=(const Vec4& rhs) { Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); Comps[3] += rhs.W(); return *this; }
-		inline const Vec4& operator-=(const Vec4& rhs) { Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); Comps[3] -= rhs.W(); return *this; }
-		inline const Vec4& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; Comps[3] *= rhs; return *this; }
-		inline const Vec4& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; Comps[3] /= rhs; return *this; }
+		inline Vec4& operator=(const Vec2& rhs) { 
+			Comps[0] = rhs.X(); Comps[1] = rhs.Y(); 
+			return *this;
+		}
+		inline Vec4& operator=(const Vec3& rhs) { 
+			Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); 
+			return *this; 
+		}
+		inline Vec4& operator=(const Vec4& rhs) {
+			std::ranges::copy(rhs.Comps, std::begin(Comps));
+			//Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W(); 
+			return *this;
+		}
+		inline const Vec4& operator+=(const Vec4& rhs) { 
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::plus());
+			//Comps[0] += rhs.X(); Comps[1] += rhs.Y(); Comps[2] += rhs.Z(); Comps[3] += rhs.W(); 
+			return *this;
+		}
+		inline const Vec4& operator-=(const Vec4& rhs) { 
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::minus());
+			//Comps[0] -= rhs.X(); Comps[1] -= rhs.Y(); Comps[2] -= rhs.Z(); Comps[3] -= rhs.W();
+			return *this;
+		}
+		inline const Vec4& operator*=(const float rhs) {
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			//Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; Comps[3] *= rhs; 
+			return *this; 
+		}
+		inline const Vec4& operator/=(const float rhs) { 
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::divides(), std::placeholders::_1, rhs));
+			//Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; Comps[3] /= rhs; 
+			return *this; 
+		}
 		inline float& operator[](const int i) { return Comps[i]; }
 		inline operator float* () { return data(Comps); }
 
@@ -200,51 +337,32 @@ namespace Math
 		inline static Vec Max() { return Vec((std::numeric_limits<float>::max)()); }
 
 		inline bool NearlyEqual(const Vec& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const {
-			for (auto i = 0; i < size(Comps); ++i) {
-				if (std::abs(Comps[i] - rhs[i]) >= Epsilon) {
-					return false; 
-				}
-			}
-			return true;
+			return std::ranges::equal(Comps, rhs.Comps, [&](const float l, const float r) { return std::abs(l - r) < Epsilon; });
 		}
 
 		inline bool operator==(const Vec& rhs) const { return std::ranges::equal(Comps, rhs.Comps); }
 		inline bool operator!=(const Vec& rhs) const { return !(*this == rhs); }
 		inline Vec operator+(const Vec& rhs) const { 
-			Vec V;
-			std::ranges::transform(Comps, rhs.Comps, std::back_inserter(V.Comps), std::plus());
-			return V;
+			Vec r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::plus()); return r;
 		}
 		inline Vec operator-(const Vec& rhs) const {
-			Vec V;
-			std::ranges::transform(Comps, rhs.Comps, std::back_inserter(V.Comps), std::minus());
-			return V;
+			Vec r; std::ranges::transform(Comps, rhs.Comps, std::begin(r.Comps), std::minus()); return r;
 		}
 		inline Vec operator*(const float rhs) const {
-			Vec V;
-			std::ranges::transform(Comps, rhs, std::back_inserter(V.Comps), std::multiplies());
-			return V;
+			Vec r; std::ranges::transform(Comps, rhs, std::begin(r.Comps), std::multiplies()); return r;
 		}
 		inline Vec operator/(const float rhs) const {
-			Vec V;
-			std::ranges::transform(Comps, rhs, std::back_inserter(V.Comps), std::divides());
-			return V;
+			Vec r; std::ranges::transform(Comps, rhs, std::begin(r.Comps), std::divides()); return r;
 		}
 		inline Vec operator-() const { 
-			Vec V;
-			std::ranges::transform(Comps, std::back_inserter(V.Comps), std::negation());
-			return V;
+			Vec r; std::ranges::transform(Comps, std::begin(r.Comps), std::negate()); return r;
 		}
 
 		inline float operator[](const int i) const { return Comps[i]; }
 		inline operator const float* () const { return data(Comps); }
 
 		inline float Dot(const Vec& rhs) const { 
-			float Sum = 0.0f;
-			for (auto i = 0; i < size(Comps); ++i) {
-				Sum += Comps[i] * rhs[i];
-			}
-			return Sum;
+			return std::inner_product(std::begin(Comps), std::end(Comps), std::begin(rhs.Comps), 0.0f);
 		}
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
@@ -256,20 +374,24 @@ namespace Math
 			return *this;
 		}
 
+		inline Vec& operator=(const Vec& rhs) {
+			std::ranges::copy(rhs.Comps, std::begin(Comps));
+			return *this;
+		}
 		inline const Vec& operator+=(const Vec& rhs) { 
-			std::ranges::transform(Comps, rhs.Comps, std::back_inserter(Comps), std::plus());
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::plus());
 			return *this;
 		}
 		inline const Vec& operator-=(const Vec& rhs) {
-			std::ranges::transform(Comps, rhs.Comps, std::back_inserter(Comps), std::divides());
+			std::ranges::transform(Comps, rhs.Comps, std::begin(Comps), std::divides());
 			return *this;
 		}
 		inline const Vec& operator*=(const float rhs) { 
-			std::ranges::transform(Comps, rhs, std::back_inserter(Comps), std::multiplies());
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs));
 			return *this; 
 		}
 		inline const Vec& operator/=(const float rhs) {
-			std::ranges::transform(Comps, rhs, std::back_inserter(Comps), std::divides());
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::divides(), std::placeholders::_1, rhs));
 			return *this; 
 		}
 		inline float& operator[](const int i) { return Comps[i]; }
