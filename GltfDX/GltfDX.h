@@ -18,7 +18,7 @@ public:
 	std::vector<UINT16> Indices16;
 	std::vector<UINT32> Indices32;
 	std::vector<DirectX::XMFLOAT3> Vertices;
-	//std::vector<DirectX::XMFLOAT3> Normals;
+	std::vector<DirectX::XMFLOAT3> Normals;
 
 #pragma region GLTF
 	virtual void LoadGltf() = 0;
@@ -35,9 +35,9 @@ public:
 		UploadResource Upload_Vertex;
 		Upload_Vertex.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 
-		//VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Normals), sizeof(Normals[0]));
-		//UploadResource Upload_Normal;
-		//Upload_Normal.Create(COM_PTR_GET(Device), TotalSizeOf(Normals), data(Normals));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Normals), sizeof(Normals[0]));
+		UploadResource Upload_Normal;
+		Upload_Normal.Create(COM_PTR_GET(Device), TotalSizeOf(Normals), data(Normals));
 
 		UploadResource Upload_Index;
 		UINT32 IndicesCount = 0;
@@ -63,9 +63,9 @@ public:
 
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			VertexBuffers[0].PopulateCopyCommand(CL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			//VertexBuffers[1].PopulateCopyCommand(CL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
-			IndexBuffers.back().PopulateCopyCommand(CL, IndicesSize, COM_PTR_GET(Upload_Index.Resource));
-			IndirectBuffers.back().PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+			VertexBuffers[1].PopulateCopyCommand(CL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
+			IndexBuffers[0].PopulateCopyCommand(CL, IndicesSize, COM_PTR_GET(Upload_Index.Resource));
+			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(CL->Close());
 		DX::ExecuteAndWait(CQ, CL, COM_PTR_GET(GraphicsFence));
 	}
@@ -79,20 +79,18 @@ public:
 		PipelineStates.emplace_back();
 
 		std::vector<COM_PTR<ID3DBlob>> SBs;
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_P.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_P.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		const std::array SBCs = {
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 		};
 		const std::vector IEDs = {
 			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
-			//D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
+			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
 		};
 		constexpr D3D12_RASTERIZER_DESC RD = {
-			.FillMode = D3D12_FILL_MODE_WIREFRAME,
+			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,
@@ -113,8 +111,7 @@ public:
 		{
 			BCL->IASetPrimitiveTopology(Topology);
 
-			//const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
-			const std::array VBVs = { VertexBuffers[0].View };
+			const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
 			BCL->IASetIndexBuffer(&IndexBuffers[0].View);
 
@@ -266,10 +263,12 @@ public:
 						default: break;
 						}
 					}
+				}
+				if (empty(Normals)) {
 					if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
 					{
 						const auto& Accessor = Document.accessors.Get(AccessorId);
-						//Normals.resize(Accessor.count);
+						Normals.resize(Accessor.count);
 						switch (Accessor.componentType)
 						{
 						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
@@ -277,7 +276,7 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_VEC3:
 							{
-								//std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
+								std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
 							}
 							break;
 							default: break;
@@ -287,30 +286,6 @@ public:
 						}
 					}
 				}
-
-				//!< Å‰‚Ì‚â‚Â‚¾‚¯
-				//if (empty(Normals)) {
-				//	if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
-				//	{
-				//		const auto& Accessor = Document.accessors.Get(AccessorId);
-				//		Normals.resize(Accessor.count);
-				//		switch (Accessor.componentType)
-				//		{
-				//		case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
-				//			switch (Accessor.type)
-				//			{
-				//			case Microsoft::glTF::AccessorType::TYPE_VEC3:
-				//			{
-				//				std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
-				//			}
-				//			break;
-				//			default: break;
-				//			}
-				//			break;
-				//		default: break;
-				//		}
-				//	}
-				//}
 			}
 		}
 	}
@@ -347,8 +322,10 @@ public:
 				//} Popd();
 			}
 			{
-				//Load(GLTF_PATH / "bunny.gltf");
-				Load(GLTF_PATH / "dragon.gltf");
+				Load(GLTF_PATH / "dragon.glb");
+				//Load(GLTF_PATH / "bunny.glb");
+				//Load(GLTF_PATH / "bunny4.glb");
+				//Load(GLTF_PATH / "happy_vrip.glb");
 				//Load(GLTF_PATH / "Box.glb");
 				//Load(GLTF_PATH / "Sphere.glb");
 			}
@@ -367,8 +344,8 @@ public:
 	virtual void LoadGltf() override {
 		std::filesystem::path Path;
 		if (FindDirectory(GLTF_DIR, Path)) {
-			Load(Path / TEXT("bunny.gltf"));
-			//Load(Path) / TEXT("dragon.gltf"));
+			Load(Path / TEXT("bunny.glb"));
+			//Load(Path) / TEXT("dragon.glb"));
 		}
 	}
 

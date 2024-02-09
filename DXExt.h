@@ -133,8 +133,8 @@ protected:
 	//virtual void PopulateCommandList(const size_t i) override {
 	//	const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 	//	constexpr std::array<D3D12_RECT, 0> Rects = {};
-	//	DCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
-	//	const std::array CHs = { SwapChainCPUHandles[i] };
-	//	DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
+	//	DCL->ClearDepthStencilView(DsvDescs[0].second, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+	//	const std::array CHs = { SwapChainBackBuffers[i] };
+	//	DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvDescs[0].second[0]);
 	//}
 };

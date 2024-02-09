@@ -17,7 +17,7 @@ public:
 	std::vector<uint16_t> Indices16;
 	std::vector<uint32_t> Indices32;
 	std::vector<glm::vec3> Vertices;
-	//std::vector<glm::vec3> Normals;
+	std::vector<glm::vec3> Normals;
 
 #pragma region GLTF
 	virtual void LoadGltf() = 0;
@@ -33,9 +33,9 @@ public:
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
 		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 
-		//VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Normals));
-		//VK::Scoped<StagingBuffer> Staging_Normal(Device);
-		//Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
+		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Normals));
+		VK::Scoped<StagingBuffer> Staging_Normal(Device);
+		Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
 
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
 		uint32_t IndicesCount = 0;
@@ -64,9 +64,9 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			VertexBuffers[0].PopulateCopyCommand(CB, TotalSizeOf(Vertices), Staging_Vertex.Buffer);
-			//VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
-			IndexBuffers.back().PopulateCopyCommand(CB, IndicesSize, Staging_Index.Buffer);
-			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
+			VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
+			IndexBuffers[0].PopulateCopyCommand(CB, IndicesSize, Staging_Index.Buffer);
+			IndirectBuffers[0].PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
@@ -74,10 +74,8 @@ public:
 		Pipelines.emplace_back();
 
 		const std::array SMs = {
-			//VK::CreateShaderModule(GetFilePath("_PN.vert.spv")),
-			//VK::CreateShaderModule(GetFilePath("_PN.frag.spv")),
-			VK::CreateShaderModule(GetFilePath("_P.vert.spv")),
-			VK::CreateShaderModule(GetFilePath("_P.frag.spv")),
+			VK::CreateShaderModule(GetFilePath("_PN.vert.spv")),
+			VK::CreateShaderModule(GetFilePath("_PN.frag.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -85,11 +83,11 @@ public:
 		};
 		const std::vector VIBDs = {
 			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
-			//VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
 			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
-			//VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -97,7 +95,7 @@ public:
 			.flags = 0,
 			.depthClampEnable = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = VK_POLYGON_MODE_LINE,
+			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
 			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
@@ -136,9 +134,10 @@ public:
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			const std::array VBs = { VertexBuffers[0].Buffer };
-			//const std::array NBs = { VertexBuffers[1].Buffer };
+			const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
+			vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, IndexType);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
@@ -270,10 +269,12 @@ public:
 						default: break;
 						}
 					}
+				}
+				if (empty(Normals)) {
 					if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
 					{
 						const auto& Accessor = Document.accessors.Get(AccessorId);
-						//Normals.resize(Accessor.count);
+						Normals.resize(Accessor.count);
 						switch (Accessor.componentType)
 						{
 						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
@@ -281,7 +282,7 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_VEC3:
 							{
-								//std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
+								std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
 							}
 							break;
 							default: break;
@@ -291,30 +292,6 @@ public:
 						}
 					}
 				}
-
-				//!< Å‰‚Ì‚â‚Â‚¾‚¯
-				//if (empty(Normals)) {
-				//	if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
-				//	{
-				//		const auto& Accessor = Document.accessors.Get(AccessorId);
-				//		Normals.resize(Accessor.count);
-				//		switch (Accessor.componentType)
-				//		{
-				//		case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
-				//			switch (Accessor.type)
-				//			{
-				//			case Microsoft::glTF::AccessorType::TYPE_VEC3:
-				//			{
-				//				std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
-				//			}
-				//			break;
-				//			default: break;
-				//			}
-				//			break;
-				//		default: break;
-				//		}
-				//	}
-				//}
 			}
 		}
 	}
@@ -351,8 +328,10 @@ public:
 				//} Popd();
 			}
 			{
-				//Load(GLTF_PATH / "bunny.gltf");
-				Load(GLTF_PATH / "dragon.gltf");
+				Load(GLTF_PATH / "dragon.glb");
+				//Load(GLTF_PATH / "bunny.glb");
+				//Load(GLTF_PATH / "bunny4.glb");
+				//Load(GLTF_PATH / "happy_vrip.glb");
 				//Load(GLTF_PATH / "Box.glb");
 				//Load(GLTF_PATH / "Sphere.glb");
 			}
