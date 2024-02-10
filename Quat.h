@@ -6,24 +6,27 @@ namespace Math
 	{
 	public:
 		Quat() {}
-		Quat(const float x, const float y, const float z, const float w) : Comps({x,y,z,w}) {}
+		Quat(const float x, const float y, const float z, const float w) : Comps({x, y, z, w}) {}
 		Quat(const Vec3& rhs) : Comps({ rhs.X(), rhs.Y(), rhs.Z(), 0.0f }) {}
 		Quat(const Vec3& Axis, const float Radian) {
 			const auto HalfRadian = 0.5f * Radian;
-			const auto a = Axis.Normalize() * sinf(HalfRadian);
-			Comps[0] = a.X();
-			Comps[1] = a.Y();
-			Comps[2] = a.Z();
-			Comps[3] = cosf(HalfRadian);
+			const auto Ax = Axis.Normalize() * sinf(HalfRadian);
+			Comps = { Ax.X(),Ax.Y(),Ax.Z(), cosf(HalfRadian) };
 		}
 
 		inline static Quat Identity() { return { 0.0f, 0.0f, 0.0f, 1.0f }; }
 
-		inline bool NearlyEqual(const Quat& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(X() - rhs.X()) < Epsilon && std::abs(Y() - rhs.Y()) < Epsilon && std::abs(Z() - rhs.Z()) < Epsilon && std::abs(W() - rhs.W()) < Epsilon; }
+		inline bool NearlyEqual(const Quat& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const {
+			return std::ranges::equal(Comps, rhs.Comps, [&](const float l, const float r) { return std::abs(l - r) < Epsilon; });
+		}
 
-		inline bool operator==(const Quat& rhs) const { return X() == rhs.X() && Y() == rhs.Y() && Z() == rhs.Z() && W() == rhs.W(); }
+		inline bool operator==(const Quat& rhs) const { 
+			return std::ranges::equal(Comps, rhs.Comps);
+		}
 		inline bool operator!=(const Quat& rhs) const { return !(*this == rhs); }
-		inline Quat operator*(const float rhs) const { return { X() * rhs, Y() * rhs, Z() * rhs, W() * rhs }; }
+		inline Quat operator*(const float rhs) const {
+			Quat r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs)); return r;
+		}
 		inline Quat operator*(const Quat& rhs) const {
 			return { 
 				X() * rhs.W() + W() * rhs.X() + Y() * rhs.Z() - Z() * rhs.Y(), 
@@ -32,7 +35,9 @@ namespace Math
 				W() * rhs.W() - X() * rhs.X() - Y() * rhs.Y() - Z() * rhs.Z() 
 			};
 		}
-		inline Quat operator/(const float rhs) const { return { X() / rhs, Y() / rhs, Z() / rhs, W() / rhs }; }
+		inline Quat operator/(const float rhs) const { 
+			Quat r; std::ranges::transform(Comps, std::begin(r.Comps), std::bind(std::divides(), std::placeholders::_1, rhs)); return r;
+		}
 
 		inline float X() const { return Comps[0]; }
 		inline float Y() const { return Comps[1]; }
@@ -48,9 +53,12 @@ namespace Math
 				Rotate(Vec3::AxisZ()),
 			};
 		}
+		inline Vec3 ToVec3() const { return static_cast<Vec3>(*this); }
 		inline Mat3 ToMat3() const { return static_cast<Mat3>(*this); }
 
-		inline float Dot(const Quat& rhs) const { return X() * rhs.X() + Y() * rhs.Y() + Z() * rhs.Z() + W() * rhs.W(); }
+		inline float Dot(const Quat& rhs) const {
+			return std::inner_product(std::begin(Comps), std::end(Comps), std::begin(rhs.Comps), 0.0f);
+		}
 		inline float LengthSq() const { return Dot(*this); }
 		inline float Length() const { return sqrtf(LengthSq()); }
 		inline Quat Normalize() const {
@@ -72,9 +80,30 @@ namespace Math
 			};
 		}
 
-		inline Quat& operator=(const Quat& rhs) { Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W(); return *this; }
-		inline const Quat& operator*=(const float rhs) { Comps[0] *= rhs; Comps[1] *= rhs; Comps[2] *= rhs; Comps[3] *= rhs; return *this; }
-		inline const Quat& operator/=(const float rhs) { Comps[0] /= rhs; Comps[1] /= rhs; Comps[2] /= rhs; Comps[3] /= rhs; return *this; }
+		//inline Quat& operator=(const Vec2& rhs) {
+		//	Comps[0] = rhs.X(); Comps[1] = rhs.Y();
+		//	return *this;
+		//}
+		//inline Quat& operator=(const Vec3& rhs) {
+		//	Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z();
+		//	return *this;
+		//}
+		//inline Quat& operator=(const Vec4& rhs) {
+		//	Comps[0] = rhs.X(); Comps[1] = rhs.Y(); Comps[2] = rhs.Z(); Comps[3] = rhs.W();
+		//	return *this;
+		//}
+		inline Quat& operator=(const Quat& rhs) { 
+			std::ranges::copy(rhs.Comps, std::begin(Comps));
+			return *this;
+		}
+		inline const Quat& operator*=(const float rhs) {
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::multiplies(), std::placeholders::_1, rhs));
+			return *this; 
+		}
+		inline const Quat& operator/=(const float rhs) {
+			std::ranges::transform(Comps, std::begin(Comps), std::bind(std::divides(), std::placeholders::_1, rhs));
+			return *this; 
+		}
 		inline float& operator[](const int i) { return Comps[i]; }
 		inline operator float* () { return data(Comps); }
 
