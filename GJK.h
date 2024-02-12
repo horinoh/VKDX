@@ -311,7 +311,7 @@ namespace Collision
 
 					//!< —LŒø‚È (Lambda ‚ª ”ñ 0) Sps ‚¾‚¯‚ðŽc‚·
 					const auto [Beg, End] = std::ranges::remove_if(Sps, [&](const auto& rhs) {
-						return 0.0f == Lambda[static_cast<int>(IndexOf(Sps, rhs))];
+						return 0.0f == Lambda[static_cast<int>(Cmn::IndexOf(Sps, rhs))];
 					});
 					Sps.erase(Beg, End);
 

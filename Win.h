@@ -26,6 +26,8 @@
 #endif
 #endif //!< _DEBUG
 
+#define TO_RADIAN(x) ((x) * std::numbers::pi_v<float> / 180.0f)
+
 //!< HDR環境が無いので保留…
 //!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
 //!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
@@ -340,8 +342,6 @@ private:
 	LARGE_INTEGER Start;
 	std::string Label;
 };
-
-template<typename T> static [[nodiscard]] size_t IndexOf(const std::vector<T>& Vector, const T& rhs) { return static_cast<size_t>(&rhs - &*std::begin(Vector)); }
 
 #ifdef DEBUG_STDOUT
 static std::ostream& Red(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED); return rhs; }
