@@ -44,7 +44,6 @@
 #define USE_SHADOWMAP_VISUALIZE //!< [ ShadowMapDX, ShadowMapVK ]
 #define USE_SHADER_REFLECTION //!< [ TriangleDX ]
 #define USE_BLAS_COMPACTION //!< [ RTTriangleDX, RTTriangleVK ] ... TLAS もコンパクションできるが、効果が大きいのは BLAS なので、ここでは BLAS のみにしている
-//#define USE_CONVEXHULL //!< [ DracoDX, DracoVK ]
 
 //!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
 #define USE_EXPERIMENTAL
