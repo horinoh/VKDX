@@ -234,6 +234,18 @@
 ~~~
 -->
 
+### WorkGraphs
+- NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility をインストールしておく
+- [DXC](https://github.com/microsoft/DirectXShaderCompiler/releases) (シェーダモデル 6.8 以降)
+	- ダウンロードして解凍
+	- dxc.exe を配置して環境変数 Path に通しておく
+	~~~
+	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
+	// デバッグ情報有
+	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
+	~~~
+- NVIDIA ドライバ 551.76 以降
+
 # 他
 ## 参考
 * [パラメトリックサーフェス](http://www.3d-meier.de/tut3/Seite0.html)

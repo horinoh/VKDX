@@ -928,6 +928,117 @@ void DX::CreateRootSignature()
 	LOG_OK();
 }
 
+void DX::CreatePipelineState()
+{
+#if 0
+	//!< NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility SDK をインストールしておく
+	//!< NVIDIA ドライバ 551.76 以降
+	//!< シェーダモデル 6.8 以降 (dxc.exe 最新をインストールしておく https://github.com/microsoft/DirectXShaderCompiler/releases)
+	//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
+	//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
+	{
+		COM_PTR<ID3D12Device14> Device14;
+		COM_PTR_AS(Device, Device14);
+
+		//!< Work Graphs サポートの有無をチェック
+		D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options = {};
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &Options, sizeof(Options)));
+		if (D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED == Options.WorkGraphsTier) {
+			Log("Work Graphs not supported");
+			__debugbreak();
+		}
+		else {
+			//!< ルートシグネチャ
+			const D3D12_GLOBAL_ROOT_SIGNATURE GRS = { .pGlobalRootSignature = COM_PTR_GET(RootSignatures[0]) };
+
+			//!< DXIL ライブラリ
+			COM_PTR<ID3DBlob> SB_WG;
+			VERIFY_SUCCEEDED(D3DReadFileToBlob(data((std::filesystem::path("..") / std::string("WorkGraphs.cso")).wstring()), COM_PTR_PUT(SB_WG)));
+			std::array EDs_WG = { D3D12_EXPORT_DESC({.Name = TEXT("main"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+			const auto DLD_WG = D3D12_DXIL_LIBRARY_DESC({
+				.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_WG->GetBufferPointer(), .BytecodeLength = SB_WG->GetBufferSize() }),
+				.NumExports = static_cast<UINT>(size(EDs_WG)), .pExports = data(EDs_WG)
+				});
+
+			//!< Work Graphs 名
+			LPCWSTR WorkGraphName = L"WorkGraphsName";
+
+			//!< ステートオブジェクト
+			const std::array SSs = {
+				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
+				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_WG }),
+				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_WORK_GRAPH, .pDesc = &WorkGraphName }),
+			};
+			const D3D12_STATE_OBJECT_DESC SOD = {
+				.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
+				.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
+			};
+			COM_PTR<ID3D12Device5> Device5;
+			VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
+			COM_PTR<ID3D12StateObject> StateObject;
+			VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObject)));
+
+			//!< プログラム ID を取得するのに必要
+			COM_PTR<ID3D12StateObjectProperties1> SOP1;
+			COM_PTR_AS(StateObject, SOP1);
+
+			//!< メモリ要求を取得するのに必要
+			COM_PTR<ID3D12WorkGraphProperties> WGP;
+			COM_PTR_AS(StateObject, WGP);
+			D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS WGMR;
+			WGP->GetWorkGraphMemoryRequirements(WGP->GetWorkGraphIndex(WorkGraphName), &WGMR);
+
+			//!< メモリ要求に応じて UAV リソースを作成
+			COM_PTR<ID3D12Resource> Resource;
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			//WGMR.MaxSizeInBytes;
+
+			//!< ルートシグネチャ、UAV をセット
+			COM_PTR<ID3D12GraphicsCommandList10> GCL;
+			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+			//GCL->SetComputeRootUnorderedAccessView(0, XXX->GetGPUVirtualAddress());
+
+			//!< プログラムをセット
+			const D3D12_SET_PROGRAM_DESC SPD = {
+				.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH,
+				.WorkGraph = D3D12_SET_WORK_GRAPH_DESC({
+					.ProgramIdentifier = SOP1->GetProgramIdentifier(WorkGraphName),
+					.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE,
+					.BackingMemory = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = Resource->GetGPUVirtualAddress(), .SizeInBytes = WGMR.MaxSizeInBytes}),
+					.NodeLocalRootArgumentsTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = 0, .SizeInBytes = 0, .StrideInBytes = 0}),
+				}),
+			};
+			GCL->SetProgram(&SPD);
+
+			//!< 入力データ (HLSL 内の定義と同等にする)
+			struct EntryRecord
+			{
+				UINT GridSize;
+				UINT RecordIndex;
+			};
+			std::array InputData = {
+				EntryRecord({.GridSize = 1, .RecordIndex = 0}),
+				EntryRecord({.GridSize = 2, .RecordIndex = 1}),
+				EntryRecord({.GridSize = 3, .RecordIndex = 2}),
+				EntryRecord({.GridSize = 4, .RecordIndex = 3}),
+			};
+
+			//!< ディスパッチ
+			const D3D12_DISPATCH_GRAPH_DESC DGD = {
+				.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT,
+				.NodeCPUInput = D3D12_NODE_CPU_INPUT({
+					.EntrypointIndex = 0,
+					.NumRecords = static_cast<UINT>(std::size(InputData)),
+					.pRecords = std::data(InputData),
+					.RecordStrideInBytes = sizeof(InputData[0]),
+				}),
+			};
+			GCL->DispatchGraph(&DGD);
+		}
+	}
+#endif
+}
+
 void DX::CreateVideo()
 {
 	COM_PTR<ID3D12VideoDevice> VideoDevice;
