@@ -91,12 +91,11 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #include <comdef.h>
 #include <system_error>
 
-//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する (In case want to use pix in Release build, define USE_PIX)
-//!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してPIXをインストールしておくこと
+//!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntime で検索 - プロジェクトを選択して PIX をインストールしておくこと
 //#define USE_PIX
 #include <pix3.h>
 //!< プログラムからキャプチャを行いたい場合 (Capture in program code)
-#if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_PIX
 #include <DXProgrammableCapture.h>
 #endif
 
@@ -536,7 +535,7 @@ public:
 	//PIXReportCounter(PCWSTR, float);
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName([[maybe_unused]] ID3D12DeviceChild* Resource, [[maybe_unused]] const std::wstring_view Name) {
-#if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_PIX
 		Resource->SetName(data(Name));
 #endif
 	}
@@ -685,7 +684,7 @@ public:
 protected:
 	std::vector<std::thread> Threads;
 
-#if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_PIX
 	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
 

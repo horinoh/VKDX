@@ -67,9 +67,8 @@
 
 #define USE_DEBUG_UTILS
 
-#ifdef _DEBUG
-#define USE_RENDERDOC
-#endif
+//!< RenderDoc を別途インストールしておくこと
+//#define USE_RENDERDOC
 
 #include "Cmn.h"
 #ifdef _WINDOWS

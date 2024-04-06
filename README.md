@@ -156,7 +156,7 @@
 		|IID_PPV_ARGS(XXX.ReleaseAndGetAddressOf())|XXX = nullptr; __uuidof(XXX), XXX.put_void()|
 
 ### [DirectXTK](https://github.com/Microsoft/DirectXTK12)
-* DirectXTK_Desktop_2022_Win10.sln を開いて x64 をビルド (Debug, Release)
+* DirectXTK_Desktop_20XX_Win10.sln を開いて x64 をビルド (Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要 (VisualStudioを更新する)
 * サブモジュール化したので再帰的にクローンする
 	* .gitmoudles に以下を追加

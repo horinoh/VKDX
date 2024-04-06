@@ -348,7 +348,7 @@ void DX::ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fen
 
 void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 {
-#if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_PIX
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, COM_PTR_UUIDOF_PUTVOID(GraphicsAnalysis)))) {
 		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する (Enabled only if executed with Alt + F5)
 		Log("Graphics Analysis is enabled\n");

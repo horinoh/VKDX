@@ -164,7 +164,7 @@ protected:
 
 		VERIFY_SUCCEEDED(DCL->Reset(DCA, nullptr));
 		{
-#if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_PIX
 			PIXScopedEvent(DCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
 #endif
 			DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
