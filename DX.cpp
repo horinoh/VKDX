@@ -928,14 +928,23 @@ void DX::CreateRootSignature()
 	LOG_OK();
 }
 
+//!< 【Work Graphs】
+//!< (1) NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility SDK をインストールしておく
+//!<     DirectX ランタイムのバージョン、場所の指定を以下のように .cpp へ記述
+//!<		extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
+//!<		extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = reinterpret_cast<const char*>(u8".\\D3D12\\"); }
+//!< (2) NVIDIA ドライバ 551.76 以降
+//!< (3) オフラインコンパイルする場合、シェーダモデル 6.8 以降 (dxc.exe 最新をインストールしておく https://github.com/microsoft/DirectXShaderCompiler/releases)
+//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
+//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
+//#define USE_WORK_GRAPHS
+#ifdef USE_WORK_GRAPHS
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = reinterpret_cast<const char*>(u8".\\D3D12\\"); }
+#endif
 void DX::CreatePipelineState()
 {
-#if 0
-	//!< NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility SDK をインストールしておく
-	//!< NVIDIA ドライバ 551.76 以降
-	//!< シェーダモデル 6.8 以降 (dxc.exe 最新をインストールしておく https://github.com/microsoft/DirectXShaderCompiler/releases)
-	//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
-	//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
+#ifdef USE_WORK_GRAPHS
 	{
 		COM_PTR<ID3D12Device14> Device14;
 		COM_PTR_AS(Device, Device14);
