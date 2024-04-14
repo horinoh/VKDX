@@ -234,24 +234,6 @@
 ~~~
 -->
 
-### WorkGraphs
-- NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility をインストールしておく
-	- DirectX ランタイム (DLL) のバージョンとその場所を指定する必要がある、以下のように .cpp へ記述
-		~~~
-		extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
-		extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
-		~~~
-- (オフラインコンパイルする場合) [DXC](https://github.com/microsoft/DirectXShaderCompiler/releases) をインストール (シェーダモデル 6.8 以降) 
-	- ダウンロードして解凍
-	- dxc.exe を配置して環境変数 Path に通しておく
-	- コンパイル例
-		~~~
-		$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
-		// デバッグ情報有でコンパイルする場合
-		$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
-		~~~
-- 要 NVIDIA ドライバ 551.76 以降
-
 # 他
 ## 参考
 * [パラメトリックサーフェス](http://www.3d-meier.de/tut3/Seite0.html)

@@ -34,3 +34,19 @@ void main(DispatchNodeInputRecord<EntryRecord> InputData, [MaxRecords(2)] NodeOu
     //!< スレッドグループ単位で実行される
     Out.OutputComplete();
 }
+
+[Shader("node")]
+[NodeLaunch("thread")]
+void SecondNode(
+    ThreadNodeInputRecord<SecondNodeInput> inputData
+    //,[MaxRecords(1)] NodeOutput<thirdNodeInput> thirdNode
+)
+{
+    // UAV[entryRecordIndex] (as uint) is the sum of all outputs from upstream node for graph entry [entryRecordIndex]
+    //InterlockedAdd(UAV[inputData.Get().EntryRecordIndex], inputData.Get().IncrementValue);
+
+    // For every thread send a task to thirdNode
+   // ThreadNodeOutputRecords<thirdNodeInput> outRec = thirdNode.GetThreadNodeOutputRecords(1);
+    //outRec.Get().entryRecordIndex = inputData.Get().entryRecordIndex;
+    //outRec.OutputComplete();
+}

@@ -1,14 +1,24 @@
 #pragma once
  
-//!< USE_WINRT が定義されない場合は WRL が使用される、WINRT では 要C++17以降 (If USE_WINRT is not defined, WRL will be used, WINRT require C++17 or later)
+//!< CCOM, WINRT, WRL が選択可能
+#define USE_CCOMPTR
 #define USE_WINRT
-#ifdef USE_WINRT
+
+#ifdef USE_CCOMPTR
+#include <atlbase.h>
+#define COM_PTR CComPtr
+#define COM_PTR_GET(_x) _x.p
+#define COM_PTR_PUT(_x) &_x
+#define COM_PTR_UUIDOF_PUTVOID(_x) IID_PPV_ARGS(&_x)
+#define COM_PTR_RESET(_x) _x = nullptr
+#define COM_PTR_AS(_x, _y) _y = _x
+#define COM_PTR_COPY(_x, _y) _x = _y
+#elif defined(USE_WINRT)
 #include <winrt/base.h>
 #define COM_PTR winrt::com_ptr
 #define COM_PTR_GET(_x) _x.get()
 #define COM_PTR_PUT(_x) _x.put()
-#define COM_PTR_PUTVOID(_x) _x.put_void()
-#define COM_PTR_UUIDOF_PUTVOID(_x) __uuidof(_x), COM_PTR_PUTVOID(_x)
+#define COM_PTR_UUIDOF_PUTVOID(_x) __uuidof(_x), _x.put_void()
 #define COM_PTR_RESET(_x) _x = nullptr
 #define COM_PTR_AS(_x, _y) winrt::copy_to_abi(_x, *_y.put_void());
 #define COM_PTR_COPY(_x, _y) _x.copy_from(COM_PTR_GET(_y))
@@ -17,8 +27,7 @@
 #define COM_PTR Microsoft::WRL::ComPtr
 #define COM_PTR_GET(_x) _x.Get()
 #define COM_PTR_PUT(_x) _x.GetAddressOf()
-#define COM_PTR_PUTVOID(_x) _x.GetAddressOf()
-#define COM_PTR_UUIDOF_PUTVOID(_x) IID_PPV_ARGS(COM_PTR_PUTVOID(_x))
+#define COM_PTR_UUIDOF_PUTVOID(_x) IID_PPV_ARGS(_x.GetAddressOf())
 #define COM_PTR_RESET(_x) _x.Reset()
 #define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y))
 #define COM_PTR_COPY(_x, _y) (_x = _y)
@@ -33,8 +42,8 @@
 
 #ifndef VERIFY_SUCCEEDED
 #ifdef _DEBUG
-//#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { OutputDebugStringA(data(std::system_category().message(HR) + "\n")); DEBUG_BREAK(); } }
-#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { MessageBoxA(nullptr, data(std::system_category().message(HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
+//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(data(std::system_category().message(_HR) + "\n")); DEBUG_BREAK(); } }
+#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { MessageBoxA(nullptr, data(std::system_category().message(_HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
 #else
 #define VERIFY_SUCCEEDED(X) (X) 
 #endif
@@ -472,6 +481,16 @@ protected:
 	}
 
 public:
+#ifdef USE_DXC
+	static bool CompileShader(LPCWSTR ShaderPath, LPCWSTR Target, ID3DBlob** Blob);
+	static bool CompileShader_VS(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("vs_6_6"), Blob); }
+	static bool CompileShader_PS(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("ps_6_6"), Blob); }
+	static bool CompileShader_DS(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("ds_6_6"), Blob); }
+	static bool CompileShader_HS(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("hs_6_6"), Blob); }
+	static bool CompileShader_GS(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("gs_6_6"), Blob); }
+	static bool CompileShader_LIB(LPCWSTR ShaderPath, ID3DBlob** Blob) { return CompileShader(ShaderPath, TEXT("lib_6_8"), Blob); }
+#endif
+
 #pragma region COMMAND
 	//static void PopulateCopyBufferRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
@@ -643,7 +662,7 @@ public:
 		COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 		bool IsLoaded = false;
 	};
-	virtual void CreatePipelineState();
+	virtual void CreatePipelineState() {}
 	//!< VS, PS, DS, HS, GS
 	static void CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 		ID3D12Device* Device, ID3D12RootSignature* RS,

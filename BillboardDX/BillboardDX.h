@@ -181,7 +181,7 @@ protected:
 					const auto& Handle = Desc.second;
 
 					const std::array DHs = { COM_PTR_GET(Heap) };
-					DCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					DCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 #pragma region FRAME_OBJECT
 					//!< CBV
 					DCL->SetGraphicsRootDescriptorTable(0, Handle[i]);

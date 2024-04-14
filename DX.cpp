@@ -270,6 +270,37 @@ void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* De
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
 }
 
+#ifdef USE_DXC
+bool DX::CompileShader(LPCWSTR ShaderPath, LPCWSTR Target, ID3DBlob** Blob)
+{
+	const auto HDC = LoadLibrary(TEXT("dxcompiler.dll"));
+	if (HDC) {
+		const auto DxcCreateInst = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(HDC, "DxcCreateInstance"));
+		COM_PTR<IDxcLibrary> DL;
+		VERIFY_SUCCEEDED(DxcCreateInst(CLSID_DxcLibrary, __uuidof(IDxcLibrary), reinterpret_cast<LPVOID*>(&DL)));
+		COM_PTR<IDxcBlobEncoding> DBE;
+		VERIFY_SUCCEEDED(DL->CreateBlobFromFile(ShaderPath, nullptr, &DBE));
+		COM_PTR<IDxcIncludeHandler> DIH;
+		VERIFY_SUCCEEDED(DL->CreateIncludeHandler(&DIH));
+		COM_PTR<IDxcCompiler> DC;
+		VERIFY_SUCCEEDED(DxcCreateInst(CLSID_DxcCompiler, __uuidof(IDxcCompiler), reinterpret_cast<LPVOID*>(&DC)));
+		COM_PTR<IDxcOperationResult> DOR;
+		VERIFY_SUCCEEDED(DC->Compile(DBE, nullptr, nullptr, Target, nullptr, 0, nullptr, 0, DIH, &DOR));
+		HRESULT HR; DOR->GetStatus(&HR); VERIFY_SUCCEEDED(HR);
+		VERIFY_SUCCEEDED(DOR->GetResult(reinterpret_cast<IDxcBlob**>(Blob)));
+
+		COM_PTR<IDxcBlobEncoding> DBEError;
+		VERIFY_SUCCEEDED(DOR->GetErrorBuffer(&DBEError));
+		const auto Text = DBEError->GetBufferPointer();
+		if (nullptr != Text) {
+			//!< HasError
+		}
+		return true;
+	}
+	return false;
+}
+#endif
+
 //void DX::PopulateCopyBufferRegionCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 //{
 //	{
@@ -926,126 +957,6 @@ void DX::CreateRootSignature()
 #endif
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0/* マルチGPUの場合に使用(1つしか使わない場合は0で良い)*/, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	LOG_OK();
-}
-
-//!< 【Work Graphs】
-//!< (1) NuGet Package で Microsoft.Direct3D.D3D12 DirectX 12 Agility SDK をインストールしておく
-//!<     DirectX ランタイムのバージョン、場所の指定を以下のように .cpp へ記述
-//!<		extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
-//!<		extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = reinterpret_cast<const char*>(u8".\\D3D12\\"); }
-//!< (2) NVIDIA ドライバ 551.76 以降
-//!< (3) オフラインコンパイルする場合、シェーダモデル 6.8 以降 (dxc.exe 最新をインストールしておく https://github.com/microsoft/DirectXShaderCompiler/releases)
-//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl
-//!<	$dxc.exe -E main -T lib_6_8 -Fo XXX.sco XXX.hlsl -Zi -Qembed_debug
-//#define USE_WORK_GRAPHS
-#ifdef USE_WORK_GRAPHS
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
-extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = reinterpret_cast<const char*>(u8".\\D3D12\\"); }
-#endif
-void DX::CreatePipelineState()
-{
-#ifdef USE_WORK_GRAPHS
-	{
-		COM_PTR<ID3D12Device14> Device14;
-		COM_PTR_AS(Device, Device14);
-
-		//!< Work Graphs サポートの有無をチェック
-		D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options = {};
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &Options, sizeof(Options)));
-		if (D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED == Options.WorkGraphsTier) {
-			Log("Work Graphs not supported");
-			__debugbreak();
-		}
-		else {
-			//!< ルートシグネチャ
-			const D3D12_GLOBAL_ROOT_SIGNATURE GRS = { .pGlobalRootSignature = COM_PTR_GET(RootSignatures[0]) };
-
-			//!< DXIL ライブラリ
-			COM_PTR<ID3DBlob> SB_WG;
-			VERIFY_SUCCEEDED(D3DReadFileToBlob(data((std::filesystem::path("..") / std::string("WorkGraphs.cso")).wstring()), COM_PTR_PUT(SB_WG)));
-			std::array EDs_WG = { D3D12_EXPORT_DESC({.Name = TEXT("main"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-			const auto DLD_WG = D3D12_DXIL_LIBRARY_DESC({
-				.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_WG->GetBufferPointer(), .BytecodeLength = SB_WG->GetBufferSize() }),
-				.NumExports = static_cast<UINT>(size(EDs_WG)), .pExports = data(EDs_WG)
-				});
-
-			//!< Work Graphs 名
-			LPCWSTR WorkGraphName = L"WorkGraphsName";
-
-			//!< ステートオブジェクト
-			const std::array SSs = {
-				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
-				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_WG }),
-				D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_WORK_GRAPH, .pDesc = &WorkGraphName }),
-			};
-			const D3D12_STATE_OBJECT_DESC SOD = {
-				.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
-				.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
-			};
-			COM_PTR<ID3D12Device5> Device5;
-			VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
-			COM_PTR<ID3D12StateObject> StateObject;
-			VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObject)));
-
-			//!< プログラム ID を取得するのに必要
-			COM_PTR<ID3D12StateObjectProperties1> SOP1;
-			COM_PTR_AS(StateObject, SOP1);
-
-			//!< メモリ要求を取得するのに必要
-			COM_PTR<ID3D12WorkGraphProperties> WGP;
-			COM_PTR_AS(StateObject, WGP);
-			D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS WGMR;
-			WGP->GetWorkGraphMemoryRequirements(WGP->GetWorkGraphIndex(WorkGraphName), &WGMR);
-
-			//!< メモリ要求に応じて UAV リソースを作成
-			COM_PTR<ID3D12Resource> Resource;
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-			//WGMR.MaxSizeInBytes;
-
-			//!< ルートシグネチャ、UAV をセット
-			COM_PTR<ID3D12GraphicsCommandList10> GCL;
-			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
-			//GCL->SetComputeRootUnorderedAccessView(0, XXX->GetGPUVirtualAddress());
-
-			//!< プログラムをセット
-			const D3D12_SET_PROGRAM_DESC SPD = {
-				.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH,
-				.WorkGraph = D3D12_SET_WORK_GRAPH_DESC({
-					.ProgramIdentifier = SOP1->GetProgramIdentifier(WorkGraphName),
-					.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE,
-					.BackingMemory = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = Resource->GetGPUVirtualAddress(), .SizeInBytes = WGMR.MaxSizeInBytes}),
-					.NodeLocalRootArgumentsTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = 0, .SizeInBytes = 0, .StrideInBytes = 0}),
-				}),
-			};
-			GCL->SetProgram(&SPD);
-
-			//!< 入力データ (HLSL 内の定義と同等にする)
-			struct EntryRecord
-			{
-				UINT GridSize;
-				UINT RecordIndex;
-			};
-			std::array InputData = {
-				EntryRecord({.GridSize = 1, .RecordIndex = 0}),
-				EntryRecord({.GridSize = 2, .RecordIndex = 1}),
-				EntryRecord({.GridSize = 3, .RecordIndex = 2}),
-				EntryRecord({.GridSize = 4, .RecordIndex = 3}),
-			};
-
-			//!< ディスパッチ
-			const D3D12_DISPATCH_GRAPH_DESC DGD = {
-				.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT,
-				.NodeCPUInput = D3D12_NODE_CPU_INPUT({
-					.EntrypointIndex = 0,
-					.NumRecords = static_cast<UINT>(std::size(InputData)),
-					.pRecords = std::data(InputData),
-					.RecordStrideInBytes = sizeof(InputData[0]),
-				}),
-			};
-			GCL->DispatchGraph(&DGD);
-		}
-	}
-#endif
 }
 
 void DX::CreateVideo()
