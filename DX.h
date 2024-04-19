@@ -102,9 +102,9 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 //!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntime で検索 - プロジェクトを選択して PIX をインストールしておくこと
 //#define USE_PIX
-#include <pix3.h>
 //!< プログラムからキャプチャを行いたい場合 (Capture in program code)
 #ifdef USE_PIX
+#include <pix3.h>
 #include <DXProgrammableCapture.h>
 #endif
 
