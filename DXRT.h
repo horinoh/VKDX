@@ -92,18 +92,7 @@ protected:
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* CL) {
 			//!< リードバックへのコピーコマンドを発行する 
-			const std::array RBs = {
-				D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = COM_PTR_GET(Info),
-					.Subresource = 0,
-					.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
-					})
-				})
-			};
-			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			ResourceBarrier(CL, COM_PTR_GET(Info), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 			CL->CopyResource(COM_PTR_GET(Read), COM_PTR_GET(Info));
 		}
 		UINT64 GetSize() {

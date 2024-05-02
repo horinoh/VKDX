@@ -291,6 +291,8 @@ public:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			vkCmdSetRayTracingPipelineStackSizeKHR(CB, 100);
+
 			PopulateBeginRenderTargetCommand(CB, RT); {
 				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipelines[0]);
 

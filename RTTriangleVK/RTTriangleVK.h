@@ -244,7 +244,7 @@ public:
 			.flags = 0,
 			.dynamicStateCount = static_cast<uint32_t>(size(DSs)), .pDynamicStates = data(DSs)
 		};
-
+		
 		const std::array RTPCIs = {
 			VkRayTracingPipelineCreateInfoKHR({
 				.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
@@ -368,6 +368,18 @@ public:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			//!< それぞれのスタックサイズ (適切な値は不明、とりあえず適当に決めておく)
+			constexpr auto RayGenStack = 10, ClosestHitStack = 10, MissStack = 10, IntersectionStack = 10, AnyHitStack = 10, CallableStack = 10;
+			constexpr auto RecursionDepth = 2;
+
+			//!< パイプラインスタックサイズの計算方法は以下のようになる
+			constexpr auto PipelineStackSize = RayGenStack
+				+ (std::min)(1, RecursionDepth) * (std::max)((std::max)(ClosestHitStack, MissStack), IntersectionStack + AnyHitStack)
+				+ (std::max)(0, RecursionDepth - 1) * (std::max)(ClosestHitStack, MissStack)
+				+ 2 * CallableStack;
+			//!< VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR 使用時にはセットする必要がある
+			vkCmdSetRayTracingPipelineStackSizeKHR(CB, PipelineStackSize);
+
 			PopulateBeginRenderTargetCommand(CB, RT); {
 				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipelines[0]);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <memory>
 
 //!< VK_NO_PROTOYYPES(VK.props) が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
 
@@ -146,40 +147,12 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
-			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+			BufferMemoryBarrier(CB, Buffer, 0, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 			{
-				const std::array BMBs = {
-					VkBufferMemoryBarrier({
-						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
-					}),
-				};
-				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-					static_cast<uint32_t>(size(MBs)), data(MBs),
-					static_cast<uint32_t>(size(BMBs)), data(BMBs),
-					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+				const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
+				vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(size(BCs)), data(BCs));
 			}
-			const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
-			vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(size(BCs)), data(BCs));
-			{
-				const std::array BMBs = {
-					VkBufferMemoryBarrier({
-						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = AF,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
-					}),
-				};
-				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, PSF, 0,
-					static_cast<uint32_t>(size(MBs)), data(MBs),
-					static_cast<uint32_t>(size(BMBs)), data(BMBs),
-					static_cast<uint32_t>(size(IMBs)), data(IMBs));
-			}
+			BufferMemoryBarrier(CB, Buffer, VK_ACCESS_MEMORY_WRITE_BIT, AF, VK_PIPELINE_STAGE_TRANSFER_BIT, PSF);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
 			VK::Scoped<StagingBuffer> Staging(Device);
@@ -396,19 +369,11 @@ public:
 		//!< レイアウトを GENERAL にしておく必要がある場合に使用
 		//!< 例) 頻繁にレイアウトの変更や戻しが必要になるような場合 UNDEFINED へは戻せないので、戻せるレイアウトである GENERAL を初期レイアウトとしておく
 		void PopulateSetLayoutCommand(const VkCommandBuffer CB, const VkImageLayout Layout) {
-			const std::array IMBs = {
-			   //!< UNDEFINED -> Layout
-			   VkImageMemoryBarrier({
-				   .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				   .pNext = nullptr,
-				   .srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				   .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = Layout,
-				   .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				   .image = Image,
-				   .subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
-			   }),
-			};
-			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			ImageMemoryBarrier(CB, 
+				Image, 
+				0, VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, Layout,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 		}
 		void SubmitSetLayoutCommand(const VkCommandBuffer CB, const VkQueue Queue, const VkImageLayout Layout = VK_IMAGE_LAYOUT_GENERAL) {
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -474,6 +439,130 @@ public:
 	[[nodiscard]] static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
 		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(data(lhs)), *reinterpret_cast<const glm::quat*>(data(rhs)), t);
 		return { v.x, v.y, v.z, v.w };
+	}
+
+	static void BufferMemoryBarrier(const VkCommandBuffer CB, 
+		const VkBuffer Buffer, 
+		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess, 
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+	{
+		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+		constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+		const std::array BMBs = {
+			VkBufferMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = SrcAccess, .dstAccessMask = DstAccess,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+			}),
+		};
+		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
+			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+	}
+	static void ImageMemoryBarrier(const VkCommandBuffer CB,
+		const VkImage Image, 
+		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess, 
+		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkImageSubresourceRange& ISR)
+	{
+		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+		constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
+		const std::array IMBs = {
+			VkImageMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = SrcAccess, .dstAccessMask = DstAccess,
+				.oldLayout = OldLayout, .newLayout = NewLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image,
+				.subresourceRange = ISR,
+			})
+		};
+		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
+			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+	}
+	static void ImageMemoryBarrier(const VkCommandBuffer CB,
+		const VkImage Image,
+		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
+		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+	{
+		ImageMemoryBarrier(CB, 
+			Image,
+			SrcAccess, DstAccess,
+			OldLayout, NewLayout,
+			SrcStage, DstStage, 
+			VkImageSubresourceRange({
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0, .levelCount = 1,
+				.baseArrayLayer = 0, .layerCount = 1
+			}));
+	}
+	static void ImageMemoryBarrier2(const VkCommandBuffer CB, 
+		const VkImage Image0, 
+		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
+		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
+		const VkImage Image1,
+		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1, 
+		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkImageSubresourceRange& ISR)
+	{
+		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+		constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
+		const std::array IMBs = {
+			VkImageMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = SrcAccess0, .dstAccessMask = DstAccess0,
+				.oldLayout = OldLayout0, .newLayout = NewLayout0,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image0,
+				.subresourceRange = ISR,
+			}),
+			VkImageMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = SrcAccess1, .dstAccessMask = DstAccess1,
+				.oldLayout = OldLayout1, .newLayout = NewLayout1,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image1,
+				.subresourceRange = ISR,
+			})
+		};
+		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
+			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+	}
+	static void ImageMemoryBarrier2(const VkCommandBuffer CB,
+		const VkImage Image0,
+		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
+		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
+		const VkImage Image1,
+		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1,
+		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+	{
+		ImageMemoryBarrier2(CB,
+			Image0,
+			SrcAccess0, DstAccess0,
+			OldLayout0, NewLayout0,
+			Image1,
+			SrcAccess1, DstAccess1,
+			OldLayout1, NewLayout1,
+			SrcStage, DstStage,
+			VkImageSubresourceRange({
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0, .levelCount = 1,
+				.baseArrayLayer = 0, .layerCount = 1
+			}));
 	}
 
 	//static [[nodiscard]] bool IsSupportedColorFormat(VkPhysicalDevice PD, const VkFormat Format) {
@@ -556,75 +645,34 @@ public:
 	//static void PopulateCopyImageToBufferCommand(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 	static void PopulateBeginRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget) {
-		constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
-		const std::array IMBs = {
-			//!< RenderTarget : TRANSFER_SRC_OPTIMAL -> GENERAL
-			VkImageMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = RenderTarget,
-				.subresourceRange = ISR
-			})
-		};
-		vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		ImageMemoryBarrier(CB,
+			RenderTarget, 
+			0, VK_ACCESS_TRANSFER_READ_BIT, 
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 	}
 	static void PopulateEndRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget, const VkImage Swapchain, const uint32_t Width, const uint32_t Height) {
-		constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
+		ImageMemoryBarrier2(CB,
+			RenderTarget, 0, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			Swapchain, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 		{
-			const std::array IMBs = {
-				//!< RenderTarget : GENERAL -> TRANSFER_SRC_OPTIMAL
-				VkImageMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_GENERAL, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = RenderTarget,
-					.subresourceRange = ISR
-				}),
-				//!< Swapchain : PRESENT_SRC_KHR -> TRANSFER_DST_OPTIMAL
-				VkImageMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Swapchain,
-					.subresourceRange = ISR
+			const std::array ICs = {
+				VkImageCopy({
+					.srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
+					.srcOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
+					.dstSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
+					.dstOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
+					.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1 }),
 				}),
 			};
-			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			vkCmdCopyImage(CB, RenderTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Swapchain, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(ICs)), data(ICs));
 		}
-
-		const std::array ICs = {
-			VkImageCopy({
-				.srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
-				.srcOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
-				.dstSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
-				.dstOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
-				.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1 }),
-			}),
-		};
-		vkCmdCopyImage(CB, RenderTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Swapchain, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(ICs)), data(ICs));
-
-		{
-			const std::array IMBs = {
-				//!< Swapchain : TRANSFER_DST_OPTIMAL -> PRESENT_SRC_KHR, 
-				VkImageMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Swapchain,
-					.subresourceRange = ISR
-				}),
-			};
-			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
-		}
+		ImageMemoryBarrier(CB, 
+			Swapchain,
+			0, VK_ACCESS_TRANSFER_WRITE_BIT, 
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 	}
 #pragma endregion
 

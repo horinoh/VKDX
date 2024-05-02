@@ -423,27 +423,11 @@ protected:
 #pragma endregion
 
 			//!< リソースバリア
-			{
-				const std::array IMBs = {
-					//!< COLOR_ATTACHMENT_READ_BIT -> SHADER_READ_BIT
-					VkImageMemoryBarrier({
-						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = RenderTextures[0].Image,
-						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
-					}),
-				};
-				//!< COLOR_ATTACHMENT_OUTPUT_BIT -> FRAGMENT_SHADER_BIT
-				vkCmdPipelineBarrier(CB,
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-					VK_DEPENDENCY_BY_REGION_BIT,
-					0, nullptr,
-					0, nullptr,
-					static_cast<uint32_t>(size(IMBs)), data(IMBs));
-			}
+			ImageMemoryBarrier(CB, 
+				RenderTextures[0].Image,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 #pragma region PASS1
 			//!< レンダーテクスチャ描画用セカンダリコマンドバッファを発行

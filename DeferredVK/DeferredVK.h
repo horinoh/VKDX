@@ -655,6 +655,11 @@ protected:
 
 			//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT -> SubpassDependencyで代用可能かも？
 			{
+				constexpr auto ISR = VkImageSubresourceRange({
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0, .levelCount = 1,
+					.baseArrayLayer = 0, .layerCount = 1
+				});
 				const std::array IMBs = {
 					//!< カラー(Color)
 					VkImageMemoryBarrier({
@@ -664,7 +669,7 @@ protected:
 						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.image = RenderTextures[0].Image,
-						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+						.subresourceRange = ISR,
 					}),
 	#pragma region MRT
 					//!< 法線(Normal)
@@ -675,7 +680,7 @@ protected:
 						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.image = RenderTextures[1].Image,
-						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+						.subresourceRange = ISR,
 					}),
 					//!< 深度(Depth)
 					VkImageMemoryBarrier({
@@ -685,7 +690,7 @@ protected:
 						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.image = RenderTextures[2].Image,
-						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+						.subresourceRange = ISR,
 					}),
 					//!< 未定
 					VkImageMemoryBarrier({
@@ -695,15 +700,17 @@ protected:
 						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.image = RenderTextures[3].Image,
-						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+						.subresourceRange = ISR,
 					}),
 	#pragma endregion
 				};
+				constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+				constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 					VK_DEPENDENCY_BY_REGION_BIT,
-					0, nullptr,
-					0, nullptr,
+					static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+					static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
 					static_cast<uint32_t>(size(IMBs)), data(IMBs));
 			}
 

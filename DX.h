@@ -43,7 +43,8 @@
 #ifndef VERIFY_SUCCEEDED
 #ifdef _DEBUG
 //#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(data(std::system_category().message(_HR) + "\n")); DEBUG_BREAK(); } }
-#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { MessageBoxA(nullptr, data(std::system_category().message(_HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
+//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { MessageBoxA(nullptr, data(std::system_category().message(_HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
+#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(std::data(std::format("HRESULT = {:#x}\n", static_cast<UINT32>(_HR)))); __debugbreak(); } }
 #else
 #define VERIFY_SUCCEEDED(X) (X) 
 #endif
@@ -144,20 +145,7 @@ public:
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_GENERIC_READ) {
 			GCL->CopyBufferRegion(COM_PTR_GET(Resource), 0, Upload, 0, Size);
-			{
-				const std::array RBs = {
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-							.pResource = COM_PTR_GET(Resource),
-							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-							.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
-						})
-					})
-				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
+			ResourceBarrier(GCL, COM_PTR_GET(Resource), D3D12_RESOURCE_STATE_COPY_DEST, RS);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_GENERIC_READ) {
 			UploadResource Upload;
@@ -496,56 +484,16 @@ public:
 	static void PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
 	static void PopulateBeginRenderTargetCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* RenderTarget) {
-		const std::array RBs = {
-			//!< RenderTarget : COPY_SOURCE -> UNORDERED_ACCESS
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = RenderTarget,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE, .StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		ResourceBarrier(GCL, RenderTarget, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	}
 	static void PopulateEndRenderTargetCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* RenderTarget, ID3D12Resource* SwapChain) {
-		{
-			const std::array RBs = {
-				//!< RenderTarget : UNORDERED_ACCESS -> COPY_SOURCE
-				D3D12_RESOURCE_BARRIER({
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RenderTarget, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
-				 }),
-				//!< SwapChain : PRESENT -> COPY_DEST
-				D3D12_RESOURCE_BARRIER({
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SwapChain, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
-				})
-			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-		}
-
+		ResourceBarrier2(GCL, 
+			RenderTarget, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE,
+			SwapChain, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
+	
 		GCL->CopyResource(SwapChain, RenderTarget);
 
-		{
-			const std::array RBs = {
-				//!< SwapChain : COPY_DEST -> PRESENT
-				D3D12_RESOURCE_BARRIER({
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-						.pResource = SwapChain,
-						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-						.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = D3D12_RESOURCE_STATE_PRESENT
-					})
-				}),
-			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-		}
+		ResourceBarrier(GCL, SwapChain, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
 	}
 #pragma endregion
 

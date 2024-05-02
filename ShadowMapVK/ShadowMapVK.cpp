@@ -359,6 +359,8 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 		//!< リソースバリア
 		{
+			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+			constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
 			const std::array IMBs = { 
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -367,15 +369,19 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.image = DepthTextures[0].Image,
-					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+					.subresourceRange = VkImageSubresourceRange({ 
+						.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 
+						.baseMipLevel = 0, .levelCount = 1, 
+						.baseArrayLayer = 0, .layerCount = 1 
+					})
 				}),
 			};
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,
-				0, nullptr,
-				0, nullptr,
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+				static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+				static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
+				static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
 		}
 
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)

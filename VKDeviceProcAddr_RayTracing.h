@@ -17,4 +17,6 @@ VK_PROC_ADDR(CmdTraceRaysIndirectKHR)
 
 VK_PROC_ADDR(CmdWriteAccelerationStructuresPropertiesKHR)
 VK_PROC_ADDR(CmdCopyAccelerationStructureKHR)
+
+VK_PROC_ADDR(CmdSetRayTracingPipelineStackSizeKHR)
 #pragma endregion

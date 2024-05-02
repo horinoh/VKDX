@@ -247,23 +247,10 @@ protected:
 			SubmitAndWait(Queue, CB);
 		}
 		void PopulateBufferMemoryBarrierCommand(const VkCommandBuffer CB) {
-			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-			const std::array BMBs = {
-				VkBufferMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
-				}),
-			};
-			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-				0,
-				static_cast<uint32_t>(size(MBs)), data(MBs),
-				static_cast<uint32_t>(size(BMBs)), data(BMBs),
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			BufferMemoryBarrier(CB,
+				Buffer,
+				VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 		}
 		static void PopulateMemoryBarrierCommand(const VkCommandBuffer CB) {
 			constexpr std::array MBs = {
@@ -279,9 +266,9 @@ protected:
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
 				0,
-				static_cast<uint32_t>(size(MBs)), data(MBs),
-				static_cast<uint32_t>(size(BMBs)), data(BMBs),
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+				static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
+				static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
+				static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
 		}
 	};
 	class BLAS : public AccelerationStructureBuffer
@@ -294,21 +281,10 @@ protected:
 			return *this;
 		}
 		void PopulateMemoryBarrierCommand(const VkCommandBuffer CB) {
-			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
-			const std::array BMBs = {
-				VkBufferMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
-				}),
-			};
-			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0,
-				static_cast<uint32_t>(size(MBs)), data(MBs),
-				static_cast<uint32_t>(size(BMBs)), data(BMBs),
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			BufferMemoryBarrier(CB,
+				Buffer,
+				VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR);
 		}
 		void PopulateCopyCommand(const VkAccelerationStructureKHR& Src, const VkAccelerationStructureKHR& Dst, const VkCommandBuffer CB) {
 			const VkCopyAccelerationStructureInfoKHR CASI = {
