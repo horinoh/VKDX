@@ -255,7 +255,7 @@ protected:
 			{
 				const auto RD = Textures[0].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
-				const auto LayerSize = size(ImageData[0]);
+				//const auto LayerSize = size(ImageData[0]);
 				const auto PitchSize = RD.Width * ImageProperties[0].bpp;
 				const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
 				const auto AlignedLayerSize = RD.Height * AlignedPitchSize;
@@ -296,7 +296,7 @@ protected:
 			{
 				const auto RD = Textures[1].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
-				constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
+				//constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
 				constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
 				const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
 				const auto AlignedLayerSize = RD.Height * AlignedPitchSize;

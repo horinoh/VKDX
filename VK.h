@@ -865,15 +865,15 @@ protected:
 				const size_t Size = In.tellg();
 				In.seekg(0, std::ios_base::beg);
 				if (Size) {
-					auto Data = new char[Size];
-					In.read(Data, Size);
-					assert(Size == *reinterpret_cast<const uint32_t*>(Data) && "");
-					assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == *(reinterpret_cast<const uint32_t*>(Data) + 1) && "");
+					auto Data = std::make_unique<std::byte[]>(Size);
+					In.read(reinterpret_cast<char*>(Data.get()), Size);
+					assert(Size == *reinterpret_cast<const uint32_t*>(Data.get()) && "");
+					assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == *(reinterpret_cast<const uint32_t*>(Data.get()) + 1) && "");
 					{
 //#ifdef DEBUG_STDOUT
 //						std::cout << *reinterpret_cast<const PipelineCacheData*>(Data);
 //#endif
-						const auto PCD = reinterpret_cast<const PipelineCacheData*>(Data);
+						const auto PCD = reinterpret_cast<const PipelineCacheData*>(Data.get());
 						Win::Log("PipelineCacheSerializer\n");
 						Win::Logf("\tSize = %d\n", PCD->Size);
 						Win::Logf("\tVersion = %s\n", PCD->Version == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");
@@ -882,9 +882,8 @@ protected:
 						Win::Log("\tUUID = "); for (auto i : PCD->UUID) { Win::Logf("%c", i); } Win::Log("\n");
 					}
 					PipelineCaches.resize(1); //!< ‘‚«ž‚ÞÛ‚Éƒ}[ƒW‚³‚ê‚Ä‚¢‚é‚Í‚¸‚È‚Ì‚Å“Ç‚Ýž‚ß‚½ê‡‚Í1‚Â‚Å—Ç‚¢
-					const VkPipelineCacheCreateInfo PCCI = { .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, .pNext = nullptr, .flags = 0, .initialDataSize = Size, .pInitialData = Data };
+					const VkPipelineCacheCreateInfo PCCI = { .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, .pNext = nullptr, .flags = 0, .initialDataSize = Size, .pInitialData = Data.get() };
 					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, nullptr, data(PipelineCaches)));
-					delete[] Data;
 					IsLoaded = true;
 				}
 				In.close();
@@ -910,14 +909,13 @@ protected:
 				size_t Size;
 				VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCaches.back(), &Size, nullptr));
 				if (Size) {
-					auto Data = new char[Size];
-					VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCaches.back(), &Size, Data));
+					auto Data = std::make_unique<std::byte[]>(Size);
+					VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCaches.back(), &Size, Data.get()));
 					std::ofstream Out(data(FilePath.string()), std::ios::out | std::ios::binary);
 					if (!Out.fail()) {
-						Out.write(Data, Size);
+						Out.write(reinterpret_cast<char*>(Data.get()), Size);
 						Out.close();
 					}
-					delete[] Data;
 				}
 			}
 			for (auto i : PipelineCaches) {

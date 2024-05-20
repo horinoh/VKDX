@@ -270,7 +270,6 @@ protected:
 		};
 
 		Pipelines.resize(2);
-		//std::vector<std::thread> Threads;
 		//!< PRSCI_0 : デプスバイアス有り (With depth bias)
 		const VkPipelineRasterizationStateCreateInfo PRSCI_0 = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,

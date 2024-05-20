@@ -353,20 +353,7 @@ void DX::PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* GCL, ID3D12
 		//const D3D12_BOX Box = { .left = static_cast<UINT>(PSFs[i].Offset), .top = 0, .front = 0, .right = static_cast<UINT>(PSFs[i].Offset) + PSFs[i].Footprint.Width, .bottom = 1, .back = 1, };
 		GCL->CopyTextureRegion(&TCL_Dst, 0, 0, 0, &TCL_Src, nullptr);
 	}
-	{
-		const std::array RBs = {
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = Dst,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-	}
+	ResourceBarrier(GCL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
 }
 
 void DX::ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence)
@@ -418,8 +405,10 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 		COM_PTR_RESET(Adapter);
 	}
 	//!< アダプター(GPU)の選択、ここでは最大メモリを選択することにする (Here, select max memory size adapter(GPU))
-	const auto Index = static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) { return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory; })));
-	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
+	VERIFY_SUCCEEDED(Factory->EnumAdapters(static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) {
+		return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory;
+	}))),
+		COM_PTR_PUT(Adapter)));
 #endif
 	VERIFY(nullptr != Adapter);
 	Log("[ Selected Adapter ]\n");
@@ -1327,6 +1316,7 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 		VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 	}
 	else {
+		//!< コンパイルしたシェーダモデルバージョンによってコケる場合がある
 		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 		if (nullptr != PLS) {
 			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
@@ -1471,6 +1461,7 @@ void DX::Draw()
 {
 	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
+	//!< コンスタントバッファの更新等
 	DrawFrame(GetCurrentBackBufferIndex());
 
 	SubmitGraphics(GetCurrentBackBufferIndex());

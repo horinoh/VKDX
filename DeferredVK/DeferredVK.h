@@ -226,7 +226,6 @@ protected:
 #pragma endregion
 	}
 	virtual void CreatePipeline() override {
-		//std::vector<std::thread> Threads;
 		Pipelines.resize(2);
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetFilePath(".pco"), 2);

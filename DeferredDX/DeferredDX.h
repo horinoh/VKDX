@@ -166,7 +166,6 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
-		//std::vector<std::thread> Threads;
 		PipelineStates.resize(2);
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetFilePath(".plo"));

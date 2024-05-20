@@ -20,7 +20,6 @@ public:
 		std::unique_ptr<uint8_t[]> Data;
 		std::vector<D3D12_SUBRESOURCE_DATA> SRDs;
 	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
 		XTKTexture& Create(ID3D12Device* Dev, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
 			bool IsCubeMap = false;
