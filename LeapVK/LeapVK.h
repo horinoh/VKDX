@@ -204,24 +204,24 @@ protected:
 		if (!empty(Textures)) {
 			const auto CB = CommandBuffers[0];
 			{
-				const auto Layers = static_cast<uint32_t>(size(ImageData));
-				const auto LayerSize = size(ImageData[0]);
+				const auto Layers = static_cast<uint32_t>(std::size(ImageData));
+				const auto LayerSize = std::size(ImageData[0]);
 				const auto TotalSize = Layers * LayerSize;
 				const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
 
 				VK::Scoped<BufferMemory> StagingBuffer(Device);
-				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(ImageData[0]));
+				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), TotalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(ImageData[0]));
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
 					BICs.emplace_back(VkBufferImageCopy({
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
 						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent
 					}));
 				}
 				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
+					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 				VK::SubmitAndWait(GraphicsQueue, CB);
 			}
@@ -231,24 +231,24 @@ protected:
 		if (size(Textures) > 1) {
 			const auto CB = CommandBuffers[0];
 			{
-				const auto Layers = static_cast<uint32_t>(size(ImageData));
+				const auto Layers = static_cast<uint32_t>(std::size(ImageData));
 				constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
 				const auto TotalSize = Layers * LayerSize;
 				constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
 
 				VK::Scoped<BufferMemory> StagingBuffer(Device);
-				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(DistortionMatrices));
+				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), TotalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(DistortionMatrices));
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
 					BICs.emplace_back(VkBufferImageCopy({
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
 						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent 
 					}));
 				}
 				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
+					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 				VK::SubmitAndWait(GraphicsQueue, CB);
 			}

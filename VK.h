@@ -414,6 +414,84 @@ public:
 		}
 	};
 
+	void UpdateTexture(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlagBits Stage) {
+		const auto PDMP = CurrentPhysicalDeviceMemoryProperties;
+		const auto CB = CommandBuffers[0];
+
+		VK::Scoped<BufferMemory> StagingBuffer(Device);
+		StagingBuffer.Create(Device, PDMP, Width * Height * Bpp, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Data);
+
+		constexpr VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			{
+				constexpr uint32_t Layers = 1;
+				constexpr uint32_t i = 0;
+				const std::vector BICs = {
+					VkBufferImageCopy({
+						.bufferOffset = i * 0, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = VkExtent3D({.width = Width, .height = Height, .depth = 1 })
+					}),
+				};
+				PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Tex.Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Stage, BICs, 1, Layers);
+			}
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		VK::SubmitAndWait(GraphicsQueue, CB);
+	}
+	void UpdateTexture2(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlagBits Stage,
+		Texture& Tex1, const uint32_t Width1, const uint32_t Height1, const uint32_t Bpp1, const void* Data1, const VkPipelineStageFlagBits Stage1) {
+		const auto PDMP = CurrentPhysicalDeviceMemoryProperties;
+		const auto CB = CommandBuffers[0];
+
+		VK::Scoped<BufferMemory> StagingBuffer(Device);
+		StagingBuffer.Create(Device, PDMP, Width * Height * Bpp, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Data);
+
+		VK::Scoped<BufferMemory> StagingBuffer1(Device);
+		StagingBuffer1.Create(Device, PDMP, Width1 * Height1 * Bpp1, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Data1);
+
+		constexpr VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			{
+				constexpr uint32_t Layers = 1;
+				constexpr uint32_t i = 0;
+				const std::vector BICs = {
+					VkBufferImageCopy({
+						.bufferOffset = i * 0, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = VkExtent3D({.width = Width, .height = Height, .depth = 1 })
+					}),
+				};
+				PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Tex.Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Stage, BICs, 1, Layers);
+			}
+			{
+				constexpr uint32_t Layers = 1;
+				constexpr uint32_t i = 0;
+				const std::vector BICs = {
+					VkBufferImageCopy({
+						.bufferOffset = i * 0, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = VkExtent3D({.width = Width1, .height = Height1, .depth = 1 })
+					}),
+				};
+				PopulateCopyBufferToImageCommand(CB, StagingBuffer1.Buffer, Tex1.Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Stage1, BICs, 1, Layers);
+			}
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		VK::SubmitAndWait(GraphicsQueue, CB);
+	}
+
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;

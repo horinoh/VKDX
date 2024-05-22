@@ -1405,7 +1405,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 				AlignedSize += LayerSize;
 			}
 			//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
-			std::vector<std::byte> AlignedData(AlignedSize, std::byte());
+			std::vector AlignedData(AlignedSize, std::byte());
 			for (UINT32 i = 0; i < size(Colors); ++i) {
 				*reinterpret_cast<UINT32*>(&AlignedData[RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)]) = Colors[i];
 			}
