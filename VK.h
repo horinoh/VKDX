@@ -71,6 +71,8 @@
 //!< RenderDoc を別途インストールしておくこと
 //#define USE_RENDERDOC
 
+//#define USE_DYNAMIC_RENDERING
+
 #include "Cmn.h"
 #ifdef _WINDOWS
 #include "Win.h"
