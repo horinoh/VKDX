@@ -77,6 +77,8 @@
     <CustomBuild Include="AnimatedTextureVK.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="AnimatedTextureVK.vert" />
+    <CustomBuild Include="AnimatedTextureVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

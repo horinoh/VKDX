@@ -16,18 +16,21 @@ public:
 protected:
 	static const uint32_t W = 1280, H = 720;
 	std::array<uint32_t, W * H> TexPattern;
-	//virtual void DrawFrame(const UINT i) override {
-	//	if (0 == i) {
-	//		std::random_device RndDev;
-	//		std::ranges::generate(TexPattern, [&]() { return RndDev(); });
+	virtual void DrawFrame(const UINT i) override {
+		if (0 == i) {
+			std::random_device RndDev;
+			std::ranges::generate(TexPattern, [&]() { return RndDev(); });
 
-	//		AnimatedTextures[0].UpdateStagingBuffer(Device, TotalSizeOf(TexPattern), std::data(TexPattern));
-	//	}
-	//}
-	//virtual void PopulateAnimatedTextureCommand(const size_t i) override {
-	//	const auto CB = CommandBuffers[i];
-	//	AnimatedTextures[0].PopulateStagingToImageCommand(CB, W, H, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-	//}
+			//!< ステージングバッファをランダムパターンで更新する (Update staging buffer by random pattern)
+			AnimatedTextures[0].UpdateStagingBuffer(Device, TotalSizeOf(TexPattern), std::data(TexPattern));
+		}
+	}
+	void PopulateAnimatedTextureCommand(const size_t i) {
+		const auto CB = CommandBuffers[i];
+
+		//!< ステージングバッファからテクスチャへコピーするコマンド (Copy from staging buffer to texture)
+		AnimatedTextures[0].PopulateStagingToImageCommand(CB, W, H, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	}
 
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -37,6 +40,7 @@ protected:
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
+		//!< アニメーションテクスチャで作成する (Create as animated texture)
 		constexpr auto Bpp = 4;
 		AnimatedTextures.emplace_back().Create(Device, CurrentPhysicalDeviceMemoryProperties, VK_FORMAT_R8G8B8A8_UNORM, Bpp, VkExtent3D({ .width = W, .height = H, .depth = 1 }));
 	}
@@ -151,6 +155,9 @@ protected:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			//!< コピーコマンドを発行 (Issue copy command)
+			PopulateAnimatedTextureCommand(i);
+
 			constexpr std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

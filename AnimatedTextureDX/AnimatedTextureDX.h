@@ -16,29 +16,33 @@ public:
 protected:
 	static const uint32_t W = 1280, H = 720;
 	std::array<uint32_t, W * H> TexPattern;
-	//virtual void DrawFrame(const UINT i) override {
-	//	if (0 == i) {
-	//		std::random_device RndDev;
-	//		std::ranges::generate(TexPattern, [&]() { return RndDev(); });
+	virtual void DrawFrame(const UINT i) override {
+		if (0 == i) {
+			std::random_device RndDev;
+			std::ranges::generate(TexPattern, [&]() { return RndDev(); });
 
-	//		constexpr auto Bpp = 4;
-	//		constexpr auto Layers = 1;
-	//		AnimatedTextures[0].UpdateUploadBuffer(W, H, Bpp, Layers, std::data(TexPattern));
-	//	}
-	//}
-	//virtual void PopulateAnimatedTextureCommand(const size_t i) override {
-	//	const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
+			//!< アップロードバッファをランダムパターンで更新する (Update upload buffer by random pattern)
+			constexpr auto Bpp = 4;
+			constexpr auto Layers = 1;
+			AnimatedTextures[0].UpdateUploadBuffer(W, H, Bpp, Layers, std::data(TexPattern));
+		}
+	}
+	void PopulateAnimatedTextureCommand(const size_t i) {
+		const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 
-	//	constexpr auto Bpp = 4;
-	//	AnimatedTextures[0].PopulateUploadToTextureCommand(DCL, Bpp);
-	//}
+		//!< アップロードバッファからテクスチャへコピーするコマンド (Copy from upload buffer to texture)
+		constexpr auto Bpp = 4;
+		AnimatedTextures[0].PopulateUploadToTextureCommand(DCL, Bpp);
+	}
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
+		//!< アニメーションテクスチャで作成する (Create as animated texture)
+		constexpr auto Bpp = 4;
 		constexpr auto Layers = 1;
-		AnimatedTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, Layers, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		AnimatedTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, Bpp, Layers, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 	virtual void CreateStaticSampler() override {
 		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
@@ -52,7 +56,6 @@ protected:
 			D3D12_DESCRIPTOR_RANGE1({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0,.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
-			//!< SRV
 			D3D12_ROOT_PARAMETER1({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE1({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
@@ -90,21 +93,19 @@ protected:
 		Threads.clear();
 	}
 	virtual void CreateDescriptor() override {
-		{
-			auto& Desc = CbvSrvUavDescs.emplace_back();
-			auto& Heap = Desc.first;
-			auto& Handle = Desc.second;
+		auto& Desc = CbvSrvUavDescs.emplace_back();
+		auto& Heap = Desc.first;
+		auto& Handle = Desc.second;
 
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 
-			auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
-			const auto& Tex = AnimatedTextures[0];
-			Device->CreateShaderResourceView(COM_PTR_GET(Tex.Resource), &Tex.SRV, CDH);
+		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
+		const auto& Tex = AnimatedTextures[0];
+		Device->CreateShaderResourceView(COM_PTR_GET(Tex.Resource), &Tex.SRV, CDH);
 
-			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
-			Handle.emplace_back(GDH);
-		}
+		auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
+		Handle.emplace_back(GDH);
 	}
 
 	virtual void PopulateBundleCommandList(const size_t i) override {
@@ -126,6 +127,9 @@ protected:
 
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 		{
+			//!< コピーコマンドを発行 (Issue copy command)
+			PopulateAnimatedTextureCommand(i);
+
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));

@@ -360,13 +360,12 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		AnimatedTexture Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const DXGI_FORMAT Format, const D3D12_RESOURCE_STATES RS) {
+		AnimatedTexture Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT Bpp, const UINT16 DepthOrArraySize, const DXGI_FORMAT Format, const D3D12_RESOURCE_STATES RS) {
 			//!< 最終リソースステートを引数で受け取り ResourceState へ覚えておく
 			Super::Create(Device, Width, Height, DepthOrArraySize, Format, (ResourceState = RS));
 
 			//!< アップロードバッファを作る
 			const auto RD = Resource->GetDesc();
-			constexpr auto Bpp = 1; //!< フォーマットから分かるが…
 			UploadBuffer.Create(Device, RD.Width, RD.Height, Bpp, DepthOrArraySize, D3D12_HEAP_TYPE_UPLOAD);
 
 			return *this;
