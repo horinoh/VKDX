@@ -42,7 +42,7 @@ protected:
 		//!< アニメーションテクスチャで作成する (Create as animated texture)
 		constexpr auto Bpp = 4;
 		constexpr auto Layers = 1;
-		AnimatedTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, Bpp, Layers, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		AnimatedTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, Bpp, Layers, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	virtual void CreateStaticSampler() override {
 		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
