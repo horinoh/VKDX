@@ -66,7 +66,9 @@
 //!<	vec3 Color = subpassLoad(XXX).rgb;
 //#define USE_SUBPASS #VK_TODO
 
+#ifdef _DEBUG
 #define USE_DEBUG_UTILS
+#endif
 
 //!< RenderDoc を別途インストールしておくこと
 //#define USE_RENDERDOC

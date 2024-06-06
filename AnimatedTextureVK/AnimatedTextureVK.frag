@@ -12,5 +12,5 @@ layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
 void main()
 {
-	OutColor = texture(Sampler2D, InTexcoord);
+	OutColor = vec4(texture(Sampler2D, InTexcoord).rgb, 1.0f);
 }
