@@ -361,7 +361,7 @@ public:
 		using Super = Texture;
 	public:
 		AnimatedTexture Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT Bpp, const UINT16 DepthOrArraySize, const DXGI_FORMAT Format, const D3D12_RESOURCE_STATES RS) {
-			//!< 最終リソースステートを引数で受け取り ResourceState へ覚えておく
+			//!< 何度も更新することになるので「最終リソースステート(RS)」にした上で覚えておく (初回を特別扱いしない)
 			Super::Create(Device, Width, Height, DepthOrArraySize, Format, (ResourceState = RS));
 
 			//!< アップロードバッファを作る
@@ -376,7 +376,7 @@ public:
 			CopyToUploadResource(COM_PTR_GET(UploadBuffer.Resource), std::size(AlignedData), std::data(AlignedData));
 		}
 		void PopulateUploadToTextureCommand(ID3D12GraphicsCommandList* CL, const UINT Bpp) {
-			//!< コピー先リソースステートへ変更する
+			//!<「最終RS」-> 「コピー先RS」の儀式を毎回行う
 			ResourceBarrier(CL, COM_PTR_GET(Resource), ResourceState, D3D12_RESOURCE_STATE_COPY_DEST);
 			PopulateCopyTextureRegionCommand(CL, COM_PTR_GET(UploadBuffer.Resource), COM_PTR_GET(Resource), Bpp, 1, ResourceState);
 		}
