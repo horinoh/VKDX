@@ -66,15 +66,33 @@ protected:
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 #ifdef USE_PARALLAX_MAP
 		//!< [0] 法線(Normal)
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds");
 		//!< [1] ディスプレースメント(Displacement)
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds");
 #else
 		//!< [0] 法線(Normal)
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds");
 		//!< [1] カラー(Color)
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds");
 #endif
+
+		{
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs0;
+			COM_PTR<ID3D12Resource> Upload0;
+			XTKTextures[0].CopyToUploadResource(Device, COM_PTR_PUT(Upload0), PSFs0);
+
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs1;
+			COM_PTR<ID3D12Resource> Upload1;
+			XTKTextures[1].CopyToUploadResource(Device, COM_PTR_PUT(Upload1), PSFs1);
+
+			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+				XTKTextures[0].PopulateCopyCommand(CL, PSFs0, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload0));
+				XTKTextures[1].PopulateCopyCommand(CL, PSFs1, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload1));
+			} VERIFY_SUCCEEDED(CL->Close());
+			DX::ExecuteAndWait(GraphicsCommandQueue, CL, GraphicsFence);
+			XTKTextures[0].Release();
+			XTKTextures[1].Release();
+		}
 
 		Super::CreateTexture();
 	}

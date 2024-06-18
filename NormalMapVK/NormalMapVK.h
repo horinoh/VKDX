@@ -59,16 +59,35 @@ protected:
 		const auto CB = CommandBuffers[0];
 #ifdef USE_PARALLAX_MAP
 		//!< [0] 法線(Normal)
-		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds");
 		//!< [1] ディスプレースメント(Displacement)
-		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds");
 #else
 		//!< [0] 法線(Normal)
-		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds");
 		//!< [1] カラー(Color)
-		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds");
 #endif
-		
+		{
+			VK::Scoped<StagingBuffer> Staging0(Device);
+			GLITextures[0].CopyToStagingBuffer(Device, PDMP, Staging0);
+
+			VK::Scoped<StagingBuffer> Staging1(Device);
+			GLITextures[1].CopyToStagingBuffer(Device, PDMP, Staging1);
+
+			constexpr VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+				.pInheritanceInfo = nullptr
+			};
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				GLITextures[0].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, Staging0.Buffer);
+				GLITextures[1].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, Staging1.Buffer);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			VK::SubmitAndWait(GraphicsQueue, CB);
+		}
+
 		//!< [2] 深度(Depth)
 		Super::CreateTexture();
 	}
