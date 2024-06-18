@@ -55,9 +55,27 @@ protected:
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		//!< [0] Displacemnt
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Displacement.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Displacement.dds");
 		//!< [1] Color
-		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds");
+
+		{
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs0;
+			COM_PTR<ID3D12Resource> Upload0;
+			XTKTextures[0].CopyToUploadResource(Device, COM_PTR_PUT(Upload0), PSFs0);
+
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs1;
+			COM_PTR<ID3D12Resource> Upload1;
+			XTKTextures[1].CopyToUploadResource(Device, COM_PTR_PUT(Upload1), PSFs1);
+
+			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+				XTKTextures[0].PopulateCopyCommand(CL, PSFs0, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload0));
+				XTKTextures[1].PopulateCopyCommand(CL, PSFs1, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload1));
+			} VERIFY_SUCCEEDED(CL->Close());
+			DX::ExecuteAndWait(GraphicsCommandQueue, CL, GraphicsFence);
+			XTKTextures[0].Release();
+			XTKTextures[1].Release();
+		}
 
 		//!< [2] Depth
 		Super::CreateTexture();

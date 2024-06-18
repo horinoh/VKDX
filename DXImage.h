@@ -37,20 +37,23 @@ public:
 					);
 			return *this;
 		}
+		void CopyToUploadResource(ID3D12Device* Dev, ID3D12Resource** Upload, std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs) {
+			PSFs.resize(std::size(SRDs));
+			std::vector<UINT> NumRows(std::size(SRDs));
+			std::vector<UINT64> RowSizeInBytes(std::size(SRDs));
+			UINT64 TotalBytes = 0;
+			const auto RD = Resource->GetDesc();
+			Dev->GetCopyableFootprints(&RD, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &TotalBytes);
+			DX::CreateBufferResource(Upload, Dev, SRDs, PSFs, NumRows, RowSizeInBytes, TotalBytes);
+		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS, ID3D12Resource* Upload) {
 			DX::PopulateCopyTextureRegionCommand(GCL, Upload, COM_PTR_GET(Resource), PSFs, RS);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Dev, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fnc, const D3D12_RESOURCE_STATES RS) {
-			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs(size(SRDs));
+			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
 			COM_PTR<ID3D12Resource> Upload;
-			{
-				std::vector<UINT> NumRows(size(SRDs));
-				std::vector<UINT64> RowSizeInBytes(size(SRDs));
-				UINT64 TotalBytes = 0;
-				const auto RD = Resource->GetDesc();
-				Dev->GetCopyableFootprints(&RD, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &TotalBytes);
-				DX::CreateBufferResource(COM_PTR_PUT(Upload), Dev, SRDs, PSFs, NumRows, RowSizeInBytes, TotalBytes);
-			}
+			CopyToUploadResource(Dev, COM_PTR_PUT(Upload), PSFs);
+
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 				PopulateCopyCommand(GCL, PSFs, RS, COM_PTR_GET(Upload));
 			} VERIFY_SUCCEEDED(GCL->Close());

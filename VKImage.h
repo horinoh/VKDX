@@ -93,6 +93,9 @@ public:
 			}
 			return *this;
 		}
+		void CopyToStagingBuffer(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, StagingBuffer& Staging) {
+			Staging.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), GliTexture.data());
+		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
 			//!< キューブマップの場合は、複数レイヤのイメージとして作成する。(When cubemap, create as layered image)
 			//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える (Tell the hardware that it should interpret its layers as faces)
@@ -115,8 +118,14 @@ public:
 		}
 		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
 			VK::Scoped<StagingBuffer> Staging(Dev);
-			Staging.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), GliTexture.data());
-			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			CopyToStagingBuffer(Dev, PDMP, Staging);
+
+			constexpr VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr, 
+				.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+				.pInheritanceInfo = nullptr
+			};
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				PopulateCopyCommand(CB, PSF, Staging.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
