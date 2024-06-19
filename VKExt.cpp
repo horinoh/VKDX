@@ -1,83 +1,70 @@
 #include "VKExt.h"
 
-//!< 画面全体を描画するようなクリアが必要無いもので使用する
-void VKExt::CreateRenderPass_None()
+void VKExt::CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp, const VkImageLayout FinalLayout)
 {
-	constexpr std::array<VkAttachmentReference, 0> InPreAtts = {};
-	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	assert(size(ColAtts) == size(ResAtts) && "");
-	constexpr std::array<uint32_t, 0> PreAtts = {};
-	VK::CreateRenderPass(RenderPasses.emplace_back(),
+	constexpr std::array<VkAttachmentReference, 0> IAs = {};
+	constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	assert(std::size(CAs) == std::size(RAs) && "");
+	constexpr std::array<uint32_t, 0> PAs = {};
+	Super::CreateRenderPass(RenderPasses.emplace_back(),
 		{
 			VkAttachmentDescription({
 				.flags = 0,
 				.format = ColorFormat,
 				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,	//!< 「開始時に何もしない」「終了時に保存」		
+				.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,	
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = FinalLayout
 			}),
 		},
 		{
 			VkSubpassDescription({
 				.flags = 0,
 				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-				.inputAttachmentCount = static_cast<uint32_t>(size(InPreAtts)), .pInputAttachments = data(InPreAtts),
-				.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
+				.inputAttachmentCount = static_cast<uint32_t>(std::size(IAs)), .pInputAttachments = std::data(IAs),
+				.colorAttachmentCount = static_cast<uint32_t>(std::size(CAs)), .pColorAttachments = std::data(CAs), .pResolveAttachments = std::data(RAs),
 				.pDepthStencilAttachment = nullptr,
-				.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
+				.preserveAttachmentCount = static_cast<uint32_t>(std::size(PAs)), .pPreserveAttachments = std::data(PAs)
 			}),
-		}, {});
+		}, 
+		{
+#if 0
+			//!< サブパス依存 (敢えて書く場合)
+			VkSubpassDependency({
+				.srcSubpass = VK_SUBPASS_EXTERNAL, .dstSubpass = 0,																		//!< サブパス外からサブパス0へ
+				.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,																			//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+			}),
+			VkSubpassDependency({
+				.srcSubpass = 0, .dstSubpass = VK_SUBPASS_EXTERNAL,																		//!< サブパス0からサブパス外へ
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+				.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+			}),
+#endif
+		});
 }
 
-//!< レンダーパスでのクリア、画面全体を描画しないような背景色でのクリアが必要なもので使用する
-void VKExt::CreateRenderPass_Clear()
+void VKExt::CreateRenderPass_Depth(const VkImageLayout FinalLayout)
 {
-	constexpr std::array<VkAttachmentReference, 0> InpAtts = {};
-	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	constexpr std::array<uint32_t, 0> PreAtts = {};
+	constexpr std::array<VkAttachmentReference, 0> IAs = {};
+	constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	assert(std::size(CAs) == std::size(RAs) && "");
+	constexpr auto DA = VkAttachmentReference({ .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
+	constexpr std::array<uint32_t, 0> PAs = {};
 
-	VK::CreateRenderPass(RenderPasses.emplace_back(), {
+	Super::CreateRenderPass(RenderPasses.emplace_back(), {
 		VkAttachmentDescription({
 			.flags = 0,
 			.format = ColorFormat,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //!< 「開始時にクリア」「終了時に保存」
-			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,	
-			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR				
-		}),
-	}, {
-		VkSubpassDescription({
-			.flags = 0,
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = static_cast<uint32_t>(size(InpAtts)), .pInputAttachments = data(InpAtts),
-			.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
-			.pDepthStencilAttachment = nullptr,																							
-			.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
-		}),
-	}, {});
-}
-//!< 深度対応レンダーパス、深度が必要なもので使用する
-void VKExt::CreateRenderPass_Depth()
-{
-	constexpr std::array<VkAttachmentReference, 0> InpAtts = {};
-	constexpr std::array ColAtts = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	constexpr std::array ResAtts = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	constexpr auto DepAtt = VkAttachmentReference({ .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }); //!< デプスアタッチメントを使用
-	constexpr std::array<uint32_t, 0> PreAtts = {};
-
-	VK::CreateRenderPass(RenderPasses.emplace_back(), {
-		VkAttachmentDescription({
-			.flags = 0,
-			.format = ColorFormat,
-			.samples = VK_SAMPLE_COUNT_1_BIT,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //!< 「開始時にクリア」「終了時に保存」
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = FinalLayout
 		}),
-		//!< デプスアタッチメントを使用
 		VkAttachmentDescription({
 			.flags = 0,
 			.format = DepthFormat,
@@ -90,10 +77,10 @@ void VKExt::CreateRenderPass_Depth()
 		VkSubpassDescription({
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = static_cast<uint32_t>(size(InpAtts)), .pInputAttachments = data(InpAtts),
-			.colorAttachmentCount = static_cast<uint32_t>(size(ColAtts)), .pColorAttachments = data(ColAtts), .pResolveAttachments = data(ResAtts),
-			.pDepthStencilAttachment = &DepAtt, //!< デプスアタッチメントを使用
-			.preserveAttachmentCount = static_cast<uint32_t>(size(PreAtts)), .pPreserveAttachments = data(PreAtts)
+			.inputAttachmentCount = static_cast<uint32_t>(std::size(IAs)), .pInputAttachments = std::data(IAs),
+			.colorAttachmentCount = static_cast<uint32_t>(std::size(CAs)), .pColorAttachments = std::data(CAs), .pResolveAttachments = std::data(RAs),
+			.pDepthStencilAttachment = &DA,
+			.preserveAttachmentCount = static_cast<uint32_t>(std::size(PAs)), .pPreserveAttachments = std::data(PAs)
 		}),
 	},
 	{});
@@ -143,9 +130,9 @@ void VKExt::CreatePipeline_VsFs_Input(VkPipeline& PL, const VkPipelineLayout PLL
 	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
 #endif
 }
 
@@ -185,9 +172,9 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(VkPipeline& PL, const VkPipelineLa
 
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
 #endif
 }
 
@@ -227,9 +214,9 @@ void VKExt::CreatePipelineState_VsFsGs_Input(VkPipeline& PL, const VkPipelineLay
 
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, &PSSCIs[2], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, &PSSCIs[2], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, &PSSCIs[2], VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineVsFsTesTcsGs, std::ref(PL), Device, PLL, RP, PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, &PSSCIs[2], VIBDs, VIADs, PCBASs, VK_NULL_HANDLE));
 #endif
 }
 
@@ -288,9 +275,9 @@ void VKExt::CreatePipeline_TsMsFs(VkPipeline& PL, const VkPipelineLayout PLL, co
 
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineTsMsFs, std::ref(PL), Device, PLL, RP, PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineTsMsFs, std::ref(PL), Device, PLL, RP, PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipelineTsMsFs, std::ref(PL), Device, PLL, RP, PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, VK_NULL_HANDLE));
+	Threads.emplace_back(std::thread::thread(Super::CreatePipelineTsMsFs, std::ref(PL), Device, PLL, RP, PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, VK_NULL_HANDLE));
 #endif
 }
 

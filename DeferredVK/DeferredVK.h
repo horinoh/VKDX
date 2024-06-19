@@ -222,7 +222,7 @@ protected:
 #pragma endregion
 
 #pragma region PASS1 (Draw fullscreen)
-		VK::CreateRenderPass();
+		VKExt::CreateRenderPass();
 #pragma endregion
 	}
 	virtual void CreatePipeline() override {

@@ -931,7 +931,7 @@ protected:
 	virtual void CreateImmutableSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps);
-	virtual void CreateRenderPass();
+	virtual void CreateRenderPass() {}
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs);
 	virtual void CreateFramebuffer() {

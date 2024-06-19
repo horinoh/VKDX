@@ -60,6 +60,7 @@ public:
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 #else
+		//!< レンダーパスでのクリア (Clear by renderpass)
 		PopulateCommandBuffer_Clear(i, Colors::SkyBlue);
 #endif
 	}

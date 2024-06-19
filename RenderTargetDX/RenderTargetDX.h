@@ -202,34 +202,38 @@ protected:
 		}
 #pragma endregion
 	}
-
-	virtual void PopulateBundleCommandList(const size_t i) override {
+	void PopulateBundleCommandList_Pass0(const size_t i) {
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-
-#pragma region PASS0
 		//!< バンドルコマンドリスト(メッシュ描画用)
-		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
-		VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BCL0->Close());
-#pragma endregion
-
-#pragma region PASS1
+		VERIFY_SUCCEEDED(BCL->Close());
+	}
+	void PopulateBundleCommandList_Pass1(const size_t i) {
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		//!< レンダーテクスチャ描画用
-		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
+		const auto PS = COM_PTR_GET(PipelineStates[1]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
-		const auto BCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
-		VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			BCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BCL1->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
+	}
+	virtual void PopulateBundleCommandList(const size_t i) override {
+#pragma region PASS0
+		PopulateBundleCommandList_Pass0(i);
+#pragma endregion
+#pragma region PASS1
+		PopulateBundleCommandList_Pass1(i);
 #pragma endregion
 	}
 	virtual void PopulateCommandList(const size_t i) override {

@@ -135,51 +135,15 @@ protected:
 #endif
 	
 #pragma region PASS0
-		{
-			constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-			constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-			constexpr std::array<uint32_t, 0> PAs = {};
 #ifdef USE_DEPTH
-			constexpr auto DA = VkAttachmentReference({ .attachment = static_cast<uint32_t>(size(CAs)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
-#endif
-			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL //!< PRESENT_SRC_KHR ではなく、COLOR_ATTACHMENT_OPTIMAL
-				}),
-#ifdef USE_DEPTH
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = DepthFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				}),
-#endif
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = data(RAs),
-#ifdef USE_DEPTH
-					.pDepthStencilAttachment = &DA,
+			CreateRenderPass_Depth_RT();
 #else
-					.pDepthStencilAttachment = nullptr,
+			CreateRenderPass_RT();
 #endif
-					.preserveAttachmentCount = static_cast<uint32_t>(size(PAs)), .pPreserveAttachments = data(PAs)
-				}),
-			}, {});
-		}
 #pragma endregion
 
 #pragma region PASS1
-		VK::CreateRenderPass();
+		VKExt::CreateRenderPass();
 #pragma endregion
 	}
 	virtual void CreatePipeline() override {
@@ -308,71 +272,74 @@ protected:
 #pragma endregion
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
+	void PopulateSecondaryCommandBuffer_Pass0(const size_t i) {
+		//!< メッシュ描画用
+		const auto RP = RenderPasses[0];
+		const auto SCB = SecondaryCommandBuffers[i];
+
+		const VkCommandBufferInheritanceInfo CBII = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.subpass = 0,
+			.framebuffer = VK_NULL_HANDLE,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
+		};
+		const VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &CBBI)); {
+			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(std::size(Viewports)), std::data(Viewports));
+			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(std::size(ScissorRects)), std::data(ScissorRects));
+
+			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+
+			vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+	}
+	void PopulateSecondaryCommandBuffer_Pass1(const size_t i) {
+		//!< レンダーテクスチャ描画用
+		const auto RP = RenderPasses[1];
+		const auto SCCount = size(SwapchainBackBuffers);
+		const auto SCB = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+
+		const VkCommandBufferInheritanceInfo CBII = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.subpass = 0,
+			.framebuffer = VK_NULL_HANDLE,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
+		};
+		const VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &CBBI)); {
+			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(std::size(Viewports)), std::data(Viewports));
+			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(std::size(ScissorRects)), std::data(ScissorRects));
+
+			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
+
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(std::size(DescriptorSets)), std::data(DescriptorSets), static_cast<uint32_t>(std::size(DynamicOffsets)), std::data(DynamicOffsets));
+
+			vkCmdDrawIndirect(SCB, IndirectBuffers[1].Buffer, 0, 1, 0);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+	}
 	virtual void PopulateSecondaryCommandBuffer(const size_t i) override {
 #pragma region PASS0
-		//!< メッシュ描画用
-		const auto RP0 = RenderPasses[0];
-		const auto SCB0 = SecondaryCommandBuffers[i];
-		{
-			const VkCommandBufferInheritanceInfo CBII = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-				.pNext = nullptr,
-				.renderPass = RP0,
-				.subpass = 0,
-				.framebuffer = VK_NULL_HANDLE,
-				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
-				.pipelineStatistics = 0,
-			};
-			const VkCommandBufferBeginInfo CBBI = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = nullptr,
-				.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-				.pInheritanceInfo = &CBII
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
-				vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-				vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-
-				vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
-
-				vkCmdDrawIndirect(SCB0, IndirectBuffers[0].Buffer, 0, 1, 0);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
-	}
+		PopulateSecondaryCommandBuffer_Pass0(i);
 #pragma endregion
-
 #pragma region PASS1
-		//!< レンダーテクスチャ描画用
-		const auto RP1 = RenderPasses[1];
-		const auto SCCount = size(SwapchainBackBuffers);
-		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
-		{
-			const VkCommandBufferInheritanceInfo CBII = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-				.pNext = nullptr,
-				.renderPass = RP1,
-				.subpass = 0,
-				.framebuffer = VK_NULL_HANDLE,
-				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
-				.pipelineStatistics = 0,
-			};
-			const VkCommandBufferBeginInfo CBBI = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = nullptr,
-				.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-				.pInheritanceInfo = &CBII
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
-				vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-				vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-
-				vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
-
-				constexpr std::array<uint32_t, 0> DynamicOffsets = {};
-				vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
-
-				vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
-		}
+		PopulateSecondaryCommandBuffer_Pass1(i);
 #pragma endregion
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {

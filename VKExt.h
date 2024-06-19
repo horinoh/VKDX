@@ -40,9 +40,17 @@ protected:
 		CreateTexture_Render(SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 
-	void CreateRenderPass_None();
-	void CreateRenderPass_Clear();
-	void CreateRenderPass_Depth();
+	//!< PRESENT_SRC
+	void CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, const VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	void CreateRenderPass_Clear() { CreateRenderPass_Default(VK_ATTACHMENT_LOAD_OP_CLEAR); }
+	void CreateRenderPass_Depth(const VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+	//!< レンダーターゲット (COLOR_ATTACHMENT) へ出力
+	void CreateRenderPass_RT() { CreateRenderPass_Default(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); }
+	void CreateRenderPass_Clear_RT() { CreateRenderPass_Default(VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); }
+	void CreateRenderPass_Depth_RT() { CreateRenderPass_Depth(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); }
+
+	virtual void CreateRenderPass() override { CreateRenderPass_Default(); }
 
 	//!< 引数のシェーダの順序は D3D12_GRAPHICS_PIPELINE_STATE_DESC 内の VS, PS, DS, HS, GS に合わせて、VS, FS, TES, TCS, GS にしておくことにする
 	void CreatePipeline_VsFs_Input(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, const VkPipelineRasterizationStateCreateInfo& PRSCI, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs);
@@ -141,8 +149,8 @@ protected:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(std::size(Viewports)), std::data(Viewports));
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(std::size(ScissorRects)), std::data(ScissorRects));
 			const std::array CVs = { VkClearValue({.color = Color }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -150,7 +158,7 @@ protected:
 				.renderPass = RenderPasses[0],
 				.framebuffer = Framebuffers[i],
 				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
-				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				.clearValueCount = static_cast<uint32_t>(std::size(CVs)), .pClearValues = std::data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 			} vkCmdEndRenderPass(CB);
