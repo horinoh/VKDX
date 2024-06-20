@@ -82,8 +82,8 @@ protected:
 	}
 	virtual void CreateStaticSampler() override {
 		//!< ShaderVisibility ‚ªˆÙ‚È‚é‚Ì‚Å 2 ‚Â—pˆÓ‚µ‚Ä‚¢‚é (D3D12_SHADER_VISIBILITY_ALL ‚É‚·‚éê‡‚Í 1 ‚Â‚ÅÏ‚Þ)
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_DOMAIN);
-		CreateStaticSampler_LinearWrap(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_DOMAIN);
+		CreateStaticSampler_LW(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;

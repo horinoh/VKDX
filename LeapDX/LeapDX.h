@@ -67,7 +67,7 @@ protected:
 	virtual void CreateStaticSampler() override {
 		//!< https://developer.leapmotion.com/documentation/v4/images.html
 		//!< フィルタを LINEAR、ラップモードを CLAMP
-		CreateStaticSampler_LinearClamp(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LC(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;

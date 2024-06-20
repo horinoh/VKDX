@@ -67,7 +67,7 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		//!< https://developer.leapmotion.com/documentation/v4/images.html
 		//!< フィルタを LINEAR、ラップモードを CLAMP
-		CreateImmutableSampler_LinearClamp();
+		CreateImmutableSampler_LC();
 	}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };

@@ -40,7 +40,6 @@ protected:
 		CreateTexture_Render(SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 
-	//!< PRESENT_SRC
 	void CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, const VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	void CreateRenderPass_Clear() { CreateRenderPass_Default(VK_ATTACHMENT_LOAD_OP_CLEAR); }
 	void CreateRenderPass_Depth(const VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -75,13 +74,13 @@ protected:
 		}
 	}
 
-	void CreateImmutableSampler_LinearRepeat() {
+	void CreateImmutableSampler_Default(const VkFilter Filter = VK_FILTER_LINEAR, const VkSamplerMipmapMode MipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, const VkSamplerAddressMode AddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT) {
 		const VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			.magFilter = Filter, .minFilter = Filter, .mipmapMode = MipmapMode,
+			.addressModeU = AddressMode, .addressModeV = AddressMode, .addressModeW = AddressMode,
 			.mipLodBias = 0.0f,
 			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
 			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
@@ -91,53 +90,21 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
-	void CreateImmutableSampler_NearestRepeat() {
-		const VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+	//!< LinearRepeat
+	void CreateImmutableSampler_LR() { 
+		CreateImmutableSampler_Default(); 
 	}
-	void CreateImmutableSampler_LinearClamp() {
-		const VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+	//!< NearestRepeat
+	void CreateImmutableSampler_NR() { 
+		CreateImmutableSampler_Default(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
 	}
-	void CreateImmutableSampler_NearestClamp() {
-		const VkSamplerCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-			.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			.mipLodBias = 0.0f,
-			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
-			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
-			.minLod = 0.0f, .maxLod = 1.0f,
-			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			.unnormalizedCoordinates = VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+	//!< LinearClamp
+	void CreateImmutableSampler_LC() { 
+		CreateImmutableSampler_Default(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE); 
+	}
+	//!< NearestClamp
+	void CreateImmutableSampler_NC() {
+		CreateImmutableSampler_Default(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE); 
 	}
 
 	void PopulateCommandBuffer_Clear(const size_t i, const VkClearColorValue& Color) {

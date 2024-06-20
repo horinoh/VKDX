@@ -315,7 +315,7 @@ public:
 		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 	virtual void CreateImmutableSampler() override {
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 	}
 	virtual void CreatePipelineLayout() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }

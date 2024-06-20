@@ -88,7 +88,7 @@ protected:
 		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;

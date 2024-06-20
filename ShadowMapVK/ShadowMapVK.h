@@ -162,7 +162,7 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ
 		//!< シェーダ内で sampler2DShadow を使用する場合は、比較方法(compareEnable=VK_TRUE, VK_COMPARE_OP_...)を指定すること
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 	}
 	virtual void CreatePipelineLayout() override {
 		//!< パス0 : パイプラインレイアウト

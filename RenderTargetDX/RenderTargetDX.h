@@ -70,7 +70,7 @@ protected:
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 #pragma endregion
 	}
 	virtual void CreateRootSignature() override {

@@ -762,6 +762,7 @@ public:
 			Swapchain, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 		{
+#if 0
 			const std::array ICs = {
 				VkImageCopy({
 					.srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
@@ -771,7 +772,28 @@ public:
 					.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1 }),
 				}),
 			};
-			vkCmdCopyImage(CB, RenderTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Swapchain, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(ICs)), data(ICs));
+			vkCmdCopyImage(CB, RenderTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Swapchain, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(std::size(ICs)), std::data(ICs));
+#else
+			const std::array IC2s = {
+				VkImageCopy2({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
+					.pNext = nullptr,
+					.srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
+					.srcOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
+					.dstSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
+					.dstOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
+					.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1 }),
+				}),
+			};
+			const VkCopyImageInfo2 CII2 = {
+				.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2,
+				.pNext = nullptr,
+				.srcImage = RenderTarget, .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.dstImage = Swapchain, .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.regionCount = static_cast<uint32_t>(std::size(IC2s)), .pRegions = std::data(IC2s)
+			};
+			vkCmdCopyImage2(CB, &CII2);
+#endif
 		}
 		ImageMemoryBarrier(CB, 
 			Swapchain,

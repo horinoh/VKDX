@@ -24,7 +24,7 @@ protected:
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {
 		//!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 #endif
 	virtual void CreateRootSignature() override {

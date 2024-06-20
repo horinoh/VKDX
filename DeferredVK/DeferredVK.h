@@ -111,7 +111,7 @@ protected:
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1 (Draw fullscreen)
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 #pragma endregion
 	}
 	virtual void CreatePipelineLayout() override {

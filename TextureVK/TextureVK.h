@@ -30,7 +30,7 @@ protected:
 #ifdef USE_IMMUTABLE_SAMPLER
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
 	virtual void CreateImmutableSampler() override {
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 	}
 #endif
 	virtual void CreatePipelineLayout() override {

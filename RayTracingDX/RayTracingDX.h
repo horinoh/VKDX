@@ -196,7 +196,7 @@ public:
 		}
 	}
 	virtual void CreateStaticSampler() override {
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 	}
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

@@ -36,10 +36,10 @@ public:
 	void CreatePipelineState_AsMsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs);
 	void CreatePipelineState_MsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_AsMsPs(PST, RS, DepthEnable, { NullSBC, SBCs[0], SBCs[1] }); }
 
-	void CreateStaticSampler_LinearWrap(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility)  {
+	void CreateStaticSampler_Default(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility, const D3D12_FILTER Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR, const D3D12_TEXTURE_ADDRESS_MODE AddressMode = D3D12_TEXTURE_ADDRESS_MODE_WRAP) {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			.Filter = Filter,
+			.AddressU = AddressMode, .AddressV = AddressMode, .AddressW = AddressMode,
 			.MipLODBias = 0.0f,
 			.MaxAnisotropy = 0,
 			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
@@ -48,42 +48,23 @@ public:
 			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
 		}));
 	}
-	void CreateStaticSampler_PointWrap(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
-		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
-		}));
+	//!< LinearWrap
+	void CreateStaticSampler_LW(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility)  {
+		CreateStaticSampler_Default(ShaderRegister, RegisterSpace, ShaderVisibility);
 	}
-	void CreateStaticSampler_LinearClamp(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
-		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
-		}));
+	//!< PointWrap
+	void CreateStaticSampler_PW(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
+		CreateStaticSampler_Default(ShaderRegister, RegisterSpace, ShaderVisibility, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 	}
-	void CreateStaticSampler_PointClamp(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
-		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = ShaderRegister, .RegisterSpace = RegisterSpace, .ShaderVisibility = ShaderVisibility
-		}));
+	//!< LinearClamp
+	void CreateStaticSampler_LC(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
+		CreateStaticSampler_Default(ShaderRegister, RegisterSpace, ShaderVisibility, D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 	}
+	//!< PointClamp
+	void CreateStaticSampler_PC(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility) {
+		CreateStaticSampler_Default(ShaderRegister, RegisterSpace, ShaderVisibility, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+	}
+
 	void PopulateCommandList_Clear(const size_t i, const DirectX::XMVECTORF32& Color) {
 		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);

@@ -78,7 +78,7 @@ protected:
 		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 	}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };

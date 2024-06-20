@@ -165,7 +165,7 @@ protected:
 	virtual void CreateStaticSampler() override {
 		//!< パス1 : スタティックサンプラ
 		//!< シェーダ内で SamplerComparisonState を使用する場合は、比較方法(D3D12_FILTER_COMPARISON_..., D3D12_COMPARISON_FUNC_...)を指定すること
-		CreateStaticSampler_LinearWrap(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateStaticSampler_LW(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateRootSignature() override {
 		//!< パス0 : ルートシグネチャ

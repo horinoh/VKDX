@@ -45,7 +45,7 @@ protected:
 		AnimatedTextures.emplace_back().Create(Device, CurrentPhysicalDeviceMemoryProperties, VK_FORMAT_R8G8B8A8_UNORM, Bpp, VkExtent3D({ .width = W, .height = H, .depth = 1 }));
 	}
 	virtual void CreateImmutableSampler() override {
-		CreateImmutableSampler_LinearRepeat();
+		CreateImmutableSampler_LR();
 	}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
