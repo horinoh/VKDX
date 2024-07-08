@@ -74,6 +74,7 @@
 //#define USE_RENDERDOC
 
 //#define USE_DYNAMIC_RENDERING
+//#define USE_SYNCHRONIZATION2
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -151,12 +152,18 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
-			BufferMemoryBarrier(CB, Buffer, 0, VK_ACCESS_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+			BufferMemoryBarrier(CB, 
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				Buffer, 
+				0, VK_ACCESS_MEMORY_WRITE_BIT);
 			{
 				const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
 				vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(size(BCs)), data(BCs));
 			}
-			BufferMemoryBarrier(CB, Buffer, VK_ACCESS_MEMORY_WRITE_BIT, AF, VK_PIPELINE_STAGE_TRANSFER_BIT, PSF);
+			BufferMemoryBarrier(CB, 
+				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
+				Buffer, 
+				VK_ACCESS_MEMORY_WRITE_BIT, AF);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
 			VK::Scoped<StagingBuffer> Staging(Device);
@@ -374,10 +381,10 @@ public:
 		//!< 例) 頻繁にレイアウトの変更や戻しが必要になるような場合 UNDEFINED へは戻せないので、戻せるレイアウトである GENERAL を初期レイアウトとしておく
 		void PopulateSetLayoutCommand(const VkCommandBuffer CB, const VkImageLayout Layout) {
 			ImageMemoryBarrier(CB, 
-				Image, 
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				Image,
 				0, VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, Layout,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				VK_IMAGE_LAYOUT_UNDEFINED, Layout);
 		}
 		void SubmitSetLayoutCommand(const VkCommandBuffer CB, const VkQueue Queue, const VkImageLayout Layout = VK_IMAGE_LAYOUT_GENERAL) {
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -518,12 +525,33 @@ public:
 	}
 
 	static void BufferMemoryBarrier(const VkCommandBuffer CB, 
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
 		const VkBuffer Buffer, 
-		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess, 
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess)
 	{
+#ifdef USE_SYNCHRONIZATION2
+		constexpr std::array<VkMemoryBarrier2, 0> MBs = {};
+		const std::array BMBs = {
+			VkBufferMemoryBarrier2({
+				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+				.pNext = nullptr,
+				.srcStageMask = SrcStage, .srcAccessMask = SrcAccess, .dstStageMask = DstStage, .dstAccessMask = DstAccess,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+			}),
+		};
+		constexpr std::array<VkImageMemoryBarrier2, 0> IMBs = {};
+		const VkDependencyInfo DI = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.pNext = nullptr,
+			.dependencyFlags = 0,
+			.memoryBarrierCount = static_cast<uint32_t>(std::size(MBs)), .pMemoryBarriers = std::data(MBs),
+			.bufferMemoryBarrierCount = static_cast<uint32_t>(std::size(BMBs)),.pBufferMemoryBarriers = std::data(BMBs),
+			.imageMemoryBarrierCount = static_cast<uint32_t>(std::size(IMBs)), .pImageMemoryBarriers = std::data(IMBs),
+		};
+		vkCmdPipelineBarrier2(CB, &DI);
+#else
 		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-		constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
 		const std::array BMBs = {
 			VkBufferMemoryBarrier({
 				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -533,18 +561,47 @@ public:
 				.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
 			}),
 		};
-		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+		constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+		vkCmdPipelineBarrier(CB,
+			SrcStage, DstStage, 
+			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
 			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
 			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+#endif
 	}
 	static void ImageMemoryBarrier(const VkCommandBuffer CB,
-		const VkImage Image, 
-		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess, 
-		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
 		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkImage Image,
+		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
+		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
 		const VkImageSubresourceRange& ISR)
 	{
+#ifdef USE_SYNCHRONIZATION2
+		//!< デバイス作成時に VkPhysicalDeviceSynchronization2Features を有効にする必要がある
+		constexpr std::array<VkMemoryBarrier2, 0> MBs = {};
+		constexpr std::array<VkBufferMemoryBarrier2, 0> BMBs = {};
+		const std::array IMBs = {
+			VkImageMemoryBarrier2({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+				.pNext = nullptr,
+				.srcStageMask = SrcStage, .srcAccessMask = SrcAccess, .dstStageMask = DstStage, .dstAccessMask = DstAccess,
+				.oldLayout = OldLayout, .newLayout = NewLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image,
+				.subresourceRange = ISR,
+			})
+		};
+		const VkDependencyInfo DI = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.pNext = nullptr,
+			.dependencyFlags = 0,
+			.memoryBarrierCount = static_cast<uint32_t>(std::size(MBs)), .pMemoryBarriers = std::data(MBs),
+			.bufferMemoryBarrierCount = static_cast<uint32_t>(std::size(BMBs)),.pBufferMemoryBarriers = std::data(BMBs),
+			.imageMemoryBarrierCount = static_cast<uint32_t>(std::size(IMBs)), .pImageMemoryBarriers = std::data(IMBs),
+		};
+		vkCmdPipelineBarrier2(CB, &DI);
+#else
 		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
 		constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
 		const std::array IMBs = {
@@ -558,22 +615,25 @@ public:
 				.subresourceRange = ISR,
 			})
 		};
-		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+		vkCmdPipelineBarrier(CB, 
+			SrcStage, DstStage, 
+			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
 			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
 			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+#endif
 	}
 	static void ImageMemoryBarrier(const VkCommandBuffer CB,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
 		const VkImage Image,
 		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
-		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+		const VkImageLayout OldLayout, const VkImageLayout NewLayout)
 	{
 		ImageMemoryBarrier(CB, 
+			SrcStage, DstStage,
 			Image,
 			SrcAccess, DstAccess,
 			OldLayout, NewLayout,
-			SrcStage, DstStage, 
 			VkImageSubresourceRange({
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0, .levelCount = 1,
@@ -581,15 +641,48 @@ public:
 			}));
 	}
 	static void ImageMemoryBarrier2(const VkCommandBuffer CB, 
-		const VkImage Image0, 
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkImage Image0,
 		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
 		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
 		const VkImage Image1,
-		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1, 
+		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1,
 		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
 		const VkImageSubresourceRange& ISR)
 	{
+#ifdef USE_SYNCHRONIZATION2
+		constexpr std::array<VkMemoryBarrier2, 0> MBs = {};
+		constexpr std::array<VkBufferMemoryBarrier2, 0> BMBs = {};
+		const std::array IMBs = {
+			VkImageMemoryBarrier2({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+				.pNext = nullptr,
+				.srcStageMask = SrcStage, .srcAccessMask = SrcAccess0, .dstStageMask = DstStage, .dstAccessMask = DstAccess0,
+				.oldLayout = OldLayout0, .newLayout = NewLayout0,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image0,
+				.subresourceRange = ISR,
+			}),
+			VkImageMemoryBarrier2({
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+				.pNext = nullptr,
+				.srcStageMask = SrcStage, .srcAccessMask = SrcAccess1, .dstStageMask = DstStage, .dstAccessMask = DstAccess1,
+				.oldLayout = OldLayout1, .newLayout = NewLayout1,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = Image1,
+				.subresourceRange = ISR,
+			})
+		};
+		const VkDependencyInfo DI = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.pNext = nullptr,
+			.dependencyFlags = 0,
+			.memoryBarrierCount = static_cast<uint32_t>(std::size(MBs)), .pMemoryBarriers = std::data(MBs),
+			.bufferMemoryBarrierCount = static_cast<uint32_t>(std::size(BMBs)),.pBufferMemoryBarriers = std::data(BMBs),
+			.imageMemoryBarrierCount = static_cast<uint32_t>(std::size(IMBs)), .pImageMemoryBarriers = std::data(IMBs),
+		};
+		vkCmdPipelineBarrier2(CB, &DI);
+#else
 		constexpr std::array<VkMemoryBarrier, 0> MBs = {};
 		constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
 		const std::array IMBs = {
@@ -612,28 +705,31 @@ public:
 				.subresourceRange = ISR,
 			})
 		};
-		vkCmdPipelineBarrier(CB, SrcStage, DstStage, 0,
+		vkCmdPipelineBarrier(CB, 
+			SrcStage, DstStage,
+			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
 			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
 			static_cast<uint32_t>(std::size(IMBs)), std::data(IMBs));
+#endif
 	}
 	static void ImageMemoryBarrier2(const VkCommandBuffer CB,
+		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
 		const VkImage Image0,
 		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
 		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
 		const VkImage Image1,
 		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1,
-		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage)
+		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1)
 	{
 		ImageMemoryBarrier2(CB,
+			SrcStage, DstStage,
 			Image0,
 			SrcAccess0, DstAccess0,
 			OldLayout0, NewLayout0,
 			Image1,
 			SrcAccess1, DstAccess1,
 			OldLayout1, NewLayout1,
-			SrcStage, DstStage,
 			VkImageSubresourceRange({
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0, .levelCount = 1,
@@ -756,29 +852,23 @@ public:
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 	static void PopulateBeginRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget) {
 		ImageMemoryBarrier(CB,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			RenderTarget, 
 			0, VK_ACCESS_TRANSFER_READ_BIT, 
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 	}
 	static void PopulateEndRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget, const VkImage Swapchain, const uint32_t Width, const uint32_t Height) {
 		ImageMemoryBarrier2(CB,
-			RenderTarget, 0, VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			Swapchain, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+
+			RenderTarget, 
+			0, VK_ACCESS_TRANSFER_READ_BIT, 
+			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			
+			Swapchain, 
+			0, VK_ACCESS_TRANSFER_WRITE_BIT, 
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		{
-#if 0
-			const std::array ICs = {
-				VkImageCopy({
-					.srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
-					.srcOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
-					.dstSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
-					.dstOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
-					.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1 }),
-				}),
-			};
-			vkCmdCopyImage(CB, RenderTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Swapchain, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(std::size(ICs)), std::data(ICs));
-#else
 			const std::array IC2s = {
 				VkImageCopy2({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
@@ -798,13 +888,12 @@ public:
 				.regionCount = static_cast<uint32_t>(std::size(IC2s)), .pRegions = std::data(IC2s)
 			};
 			vkCmdCopyImage2(CB, &CII2);
-#endif
 		}
 		ImageMemoryBarrier(CB, 
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			Swapchain,
 			0, VK_ACCESS_TRANSFER_WRITE_BIT, 
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 #pragma endregion
 
