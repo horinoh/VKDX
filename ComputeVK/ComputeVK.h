@@ -21,7 +21,7 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		//!< スワップチェインと同じカラーフォーマットにしておく、(レイアウトは変更したり戻したりするので、戻せるレイアウトにしておく(ここでは TRANSFER_SRC_OPTIMAL))
+		//!< スワップチェインと同じカラーフォーマットにしておく、(レイアウトは変更したり戻したりするので、戻せるレイアウト(ここでは TRANSFER_SRC_OPTIMAL)にしておく)
 		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
 			.SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
@@ -74,8 +74,11 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 
-		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
-		
+		const auto DII = VkDescriptorImageInfo({ 
+			.sampler = VK_NULL_HANDLE, //!< CS ではサンプラを経由しない
+			.imageView = StorageTextures[0].View, 
+			.imageLayout = VK_IMAGE_LAYOUT_GENERAL 
+		});
 		VkDescriptorUpdateTemplate DUT;
 		VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_COMPUTE, {
 			VkDescriptorUpdateTemplateEntry({
@@ -84,30 +87,13 @@ protected:
 				.offset = 0, .stride = sizeof(DII)
 			}),
 		}, DescriptorSetLayouts[0]);
-
-		//constexpr std::array DUTEs = {
-		//	VkDescriptorUpdateTemplateEntry({
-		//		.dstBinding = 0, .dstArrayElement = 0,
-		//		.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		//		.offset = 0, .stride = sizeof(DII)
-		//	}),
-		//};
-		//const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-		//	.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-		//	.pNext = nullptr,
-		//	.flags = 0,
-		//	.descriptorUpdateEntryCount = static_cast<uint32_t>(size(DUTEs)), .pDescriptorUpdateEntries = data(DUTEs),
-		//	.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-		//	.descriptorSetLayout = DescriptorSetLayouts[0],
-		//	.pipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE,
-		//	.pipelineLayout = VK_NULL_HANDLE, .set = 0
-		//};
-		//VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
-
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
 	
 	virtual void PopulateCommandBuffer(const size_t i) override {
+		//StorageTextures[0].PopulateSetLayoutCommand(CB, VK_IMAGE_LAYOUT_GENERAL);
+
+		//!< [Pass0] コンピュート (VK_IMAGE_LAYOUT_GENERAL)
 		{
 			const auto CCB = ComputeCommandBuffers[0];
 			constexpr VkCommandBufferBeginInfo CBBI = {
@@ -126,6 +112,10 @@ protected:
 				vkCmdDispatchIndirect(CCB, IndirectBuffers[0].Buffer, 0);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CCB));
 		}
+
+		//StorageTextures[0].PopulateSetLayoutCommand(CB, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		//!< [Pass1] 結果表示 (VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 		{
 			const auto CB = CommandBuffers[i];
 			constexpr VkCommandBufferBeginInfo CBBI = {

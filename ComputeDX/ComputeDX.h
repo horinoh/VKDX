@@ -76,6 +76,8 @@ protected:
 	
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+		//!< [Pass0] コンピュート
 		{
 			const auto& Desc = CbvSrvUavDescs[0];
 			const auto& Heap = Desc.first;
@@ -93,6 +95,7 @@ protected:
 				CCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 			} VERIFY_SUCCEEDED(CCL->Close());
 		}
+		//!< [Pass1] 結果表示
 		{
 			const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 			const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);

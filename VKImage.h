@@ -102,11 +102,13 @@ public:
 			//!< キューブマップの場合フェイスの順序は +X-X+Y-Y+Z-Z (When cubemap, faces order is +X-X+Y-Y+Z-Z)
 			const auto Layers = static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces());
 			const auto Levels = static_cast<const uint32_t>(GliTexture.levels());
-			std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers * Levels);
+			std::vector<VkBufferImageCopy2> BICs; BICs.reserve(Layers * Levels);
 			VkDeviceSize Offset = 0;
 			for (uint32_t i = 0; i < Layers; ++i) {
 				for (uint32_t j = 0; j < Levels; ++j) {
-					BICs.emplace_back(VkBufferImageCopy({
+					BICs.emplace_back(VkBufferImageCopy2({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+						.pNext = nullptr,
 						.bufferOffset = Offset, .bufferRowLength = 0, .bufferImageHeight = 0,
 						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }),
 						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),

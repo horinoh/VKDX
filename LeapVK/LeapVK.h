@@ -211,9 +211,11 @@ protected:
 
 				VK::Scoped<BufferMemory> StagingBuffer(Device);
 				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), TotalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(ImageData[0]));
-				std::vector<VkBufferImageCopy> BICs;
+				std::vector<VkBufferImageCopy2> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
-					BICs.emplace_back(VkBufferImageCopy({
+					BICs.emplace_back(VkBufferImageCopy2({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+						.pNext = nullptr,
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
 						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
 						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent
@@ -238,9 +240,11 @@ protected:
 
 				VK::Scoped<BufferMemory> StagingBuffer(Device);
 				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), TotalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(DistortionMatrices));
-				std::vector<VkBufferImageCopy> BICs;
+				std::vector<VkBufferImageCopy2> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
-					BICs.emplace_back(VkBufferImageCopy({
+					BICs.emplace_back(VkBufferImageCopy2({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+						.pNext = nullptr,
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
 						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
 						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent 

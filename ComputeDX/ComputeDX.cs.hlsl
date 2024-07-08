@@ -16,6 +16,7 @@ uint Mandelbrot(const float2 c, const uint iterations)
 
 RWTexture2D<float4> TextureMap : register(u0, space0);
 
+//!< (スレッドグループ1つ当たりの) 起動するスレッド数の指定 (スレッドグループの数は Dispatch() の引数で指定している)
 [numthreads(32, 32, 1)]
 void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID, uint3 dispatchThreadId : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {

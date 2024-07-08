@@ -413,7 +413,10 @@ public:
 		using Super = Texture;
 	public:
 		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
-			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+			Super::Create(Device, PDMP, Format, Extent, 1, 1, 
+				VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				//VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_IMAGE_ASPECT_COLOR_BIT);
 			return *this;
 		}
 	};
@@ -734,10 +737,12 @@ public:
 
 #pragma region COMMAND
 	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const VkPipelineStageFlags PSF) {
-		std::vector<VkBufferImageCopy> BICs;
+		std::vector<VkBufferImageCopy2> BICs;
 		for (uint32_t i = 0; i < Layers; ++i) {
 			BICs.emplace_back(
-				VkBufferImageCopy({
+				VkBufferImageCopy2({
+					.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+					.pNext = nullptr,
 					.bufferOffset = i * 0, .bufferRowLength = 0, .bufferImageHeight = 0,
 					.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
 					.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
@@ -747,7 +752,7 @@ public:
 		}
 		PopulateCopyBufferToImageCommand(CB, Src, Dst, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 1);
 	}
-	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
+	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy2>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 	static void PopulateBeginRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget) {
 		ImageMemoryBarrier(CB,
