@@ -74,7 +74,7 @@
 //#define USE_RENDERDOC
 
 //#define USE_DYNAMIC_RENDERING
-//#define USE_SYNCHRONIZATION2
+#define USE_SYNCHRONIZATION2
 
 #include "Cmn.h"
 #ifdef _WINDOWS

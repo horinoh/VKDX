@@ -60,10 +60,8 @@ protected:
 		return HasMeshShaderEXTSupport(PD);
 #endif
 	}
-
 	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
-		//Super::CreateInstance(AdditionalLayers, AdditionalExtensions);	//!< VKExt	: VK_LAYER_RENDERDOC_Capture を使用する
-		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);			//!< VK		: VK_LAYER_RENDERDOC_Capture を使用しない
+		Super::CreateInstance(AdditionalLayers, AdditionalExtensions);
 	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
@@ -71,10 +69,20 @@ protected:
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
 #ifdef USE_NV_MESH_SHADER
+#ifdef USE_SYNCHRONIZATION2
+			VkPhysicalDeviceSynchronization2Features PDS2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES, .pNext = nullptr, .synchronization2 = VK_TRUE };
+			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = &PDS2, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
+#else
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
+#endif
 			Super::CreateDevice(hWnd, hInstance, &PDMSF, { VK_NV_MESH_SHADER_EXTENSION_NAME });
 #else
-			VkPhysicalDeviceMeshShaderFeaturesEXT PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, .multiviewMeshShader = VK_FALSE, .primitiveFragmentShadingRateMeshShader = VK_FALSE, .meshShaderQueries = VK_FALSE };
+#ifdef USE_SYNCHRONIZATION2
+			VkPhysicalDeviceSynchronization2Features PDS2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES, .pNext = nullptr, .synchronization2 = VK_TRUE };
+			VkPhysicalDeviceMeshShaderFeaturesEXT PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT, .pNext = &PDS2, .taskShader = VK_TRUE, .meshShader = VK_TRUE, .multiviewMeshShader = VK_TRUE, .primitiveFragmentShadingRateMeshShader = VK_TRUE, .meshShaderQueries = VK_TRUE };
+#else
+			VkPhysicalDeviceMeshShaderFeaturesEXT PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, .multiviewMeshShader = VK_TRUE, .primitiveFragmentShadingRateMeshShader = VK_TRUE, .meshShaderQueries = VK_TRUE };
+#endif
 			Super::CreateDevice(hWnd, hInstance, &PDMSF, { VK_EXT_MESH_SHADER_EXTENSION_NAME });
 #endif
 		}
@@ -86,6 +94,6 @@ protected:
 #ifdef USE_NV_MESH_SHADER
 	VkPhysicalDeviceMeshShaderPropertiesNV PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV, .pNext = nullptr };
 #else
-	VkPhysicalDeviceMeshShaderPropertiesEXT PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV, .pNext = nullptr };
+	VkPhysicalDeviceMeshShaderPropertiesEXT PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT, .pNext = nullptr };
 #endif
 };
