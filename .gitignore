@@ -6,3 +6,4 @@
 *.iobj
 *.ipdb
 *.vcxproj.user
+.vs/

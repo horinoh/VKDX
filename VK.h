@@ -930,11 +930,11 @@ protected:
 
 	virtual void AllocatePrimaryCommandBuffer(const size_t Count);
 	void AllocatePrimaryCommandBuffer() {
-		AllocatePrimaryCommandBuffer(size(SwapchainBackBuffers));
+		AllocatePrimaryCommandBuffer(std::size(SwapchainBackBuffers));
 	}
 	void AllocateSecondaryCommandBuffer(const size_t Count);
 	virtual void AllocateSecondaryCommandBuffer() {
-		AllocateSecondaryCommandBuffer(size(SwapchainBackBuffers));
+		AllocateSecondaryCommandBuffer(std::size(SwapchainBackBuffers));
 	}
 	virtual void AllocateComputeCommandBuffer();
 	virtual void AllocateCommandBuffer() {

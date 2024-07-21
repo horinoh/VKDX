@@ -34,7 +34,8 @@ protected:
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		//constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
 
 		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]));
 		UploadResource Upload_Vertex;
