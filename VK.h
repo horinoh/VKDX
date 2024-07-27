@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <memory>
+#include <map>
 
 //!< VK_NO_PROTOYYPES(VK.props) が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
 
@@ -74,6 +75,7 @@
 //#define USE_RENDERDOC
 
 //#define USE_DYNAMIC_RENDERING
+//#define USE_TIMELINESEMAPHORE
 #define USE_SYNCHRONIZATION2
 
 #include "Cmn.h"
@@ -152,17 +154,17 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
-			BufferMemoryBarrier(CB, 
+			BufferMemoryBarrier(CB,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				Buffer, 
+				Buffer,
 				0, VK_ACCESS_MEMORY_WRITE_BIT);
 			{
 				const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
-				vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(size(BCs)), data(BCs));
+				vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(std::size(BCs)), std::data(BCs));
 			}
-			BufferMemoryBarrier(CB, 
+			BufferMemoryBarrier(CB,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
-				Buffer, 
+				Buffer,
 				VK_ACCESS_MEMORY_WRITE_BIT, AF);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
@@ -204,7 +206,7 @@ public:
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
-		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) { 
+		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
@@ -232,7 +234,7 @@ public:
 	private:
 		using Super = DeviceLocalBuffer;
 	protected:
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) { 
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
@@ -263,12 +265,12 @@ public:
 		using Super = BufferMemory;
 	public:
 		UniformBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
-			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Source);
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Source);
 			return *this;
 		}
 	};
 
-	class DeviceLocalStorageBuffer : public DeviceLocalBuffer 
+	class DeviceLocalStorageBuffer : public DeviceLocalBuffer
 	{
 	private:
 		using Super = DeviceLocalBuffer;
@@ -314,7 +316,7 @@ public:
 		using Super = DeviceLocalBuffer;
 	public:
 		VkBufferView View = VK_NULL_HANDLE;
-		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlagBits AdditionalUsage = static_cast< VkBufferUsageFlagBits>(0)) {
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | AdditionalUsage);
 			return *this;
 		}
@@ -380,7 +382,7 @@ public:
 		//!< レイアウトを GENERAL にしておく必要がある場合に使用
 		//!< 例) 頻繁にレイアウトの変更や戻しが必要になるような場合 UNDEFINED へは戻せないので、戻せるレイアウトである GENERAL を初期レイアウトとしておく
 		void PopulateSetLayoutCommand(const VkCommandBuffer CB, const VkImageLayout Layout) {
-			ImageMemoryBarrier(CB, 
+			ImageMemoryBarrier(CB,
 				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				Image,
 				0, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -420,7 +422,7 @@ public:
 		using Super = Texture;
 	public:
 		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
-			Super::Create(Device, PDMP, Format, Extent, 1, 1, 
+			Super::Create(Device, PDMP, Format, Extent, 1, 1,
 				VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				//VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				VK_IMAGE_ASPECT_COLOR_BIT);
@@ -504,7 +506,7 @@ public:
 	virtual void OnPreDestroy() override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
-	
+
 	[[nodiscard]] static const char* GetVkResultChar(const VkResult Result);
 	[[nodiscard]] static const char* GetFormatChar(const VkFormat Format);
 	[[nodiscard]] static const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
@@ -524,9 +526,9 @@ public:
 		return { v.x, v.y, v.z, v.w };
 	}
 
-	static void BufferMemoryBarrier(const VkCommandBuffer CB, 
+	static void BufferMemoryBarrier(const VkCommandBuffer CB,
 		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
-		const VkBuffer Buffer, 
+		const VkBuffer Buffer,
 		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess)
 	{
 #ifdef USE_SYNCHRONIZATION2
@@ -563,7 +565,7 @@ public:
 		};
 		constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
 		vkCmdPipelineBarrier(CB,
-			SrcStage, DstStage, 
+			SrcStage, DstStage,
 			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
 			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
@@ -615,8 +617,8 @@ public:
 				.subresourceRange = ISR,
 			})
 		};
-		vkCmdPipelineBarrier(CB, 
-			SrcStage, DstStage, 
+		vkCmdPipelineBarrier(CB,
+			SrcStage, DstStage,
 			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
 			static_cast<uint32_t>(std::size(BMBs)), std::data(BMBs),
@@ -629,7 +631,7 @@ public:
 		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
 		const VkImageLayout OldLayout, const VkImageLayout NewLayout)
 	{
-		ImageMemoryBarrier(CB, 
+		ImageMemoryBarrier(CB,
 			SrcStage, DstStage,
 			Image,
 			SrcAccess, DstAccess,
@@ -638,9 +640,9 @@ public:
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0, .levelCount = 1,
 				.baseArrayLayer = 0, .layerCount = 1
-			}));
+				}));
 	}
-	static void ImageMemoryBarrier2(const VkCommandBuffer CB, 
+	static void ImageMemoryBarrier2(const VkCommandBuffer CB,
 		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
 		const VkImage Image0,
 		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
@@ -705,7 +707,7 @@ public:
 				.subresourceRange = ISR,
 			})
 		};
-		vkCmdPipelineBarrier(CB, 
+		vkCmdPipelineBarrier(CB,
 			SrcStage, DstStage,
 			0,
 			static_cast<uint32_t>(std::size(MBs)), std::data(MBs),
@@ -734,7 +736,7 @@ public:
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0, .levelCount = 1,
 				.baseArrayLayer = 0, .layerCount = 1
-			}));
+				}));
 	}
 
 	//static [[nodiscard]] bool IsSupportedColorFormat(VkPhysicalDevice PD, const VkFormat Format) {
@@ -809,7 +811,7 @@ public:
 				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Dev, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 			} vkUnmapMemory(Dev, DM);
-		}
+			}
 	}
 	static void CopyToDeviceMemory(VkDeviceMemory* DeviceMemory, const VkDevice Device, const size_t Size, const VkBufferUsageFlags BUF, const void* Src) {
 		constexpr auto MapSize = VK_WHOLE_SIZE;
@@ -853,20 +855,20 @@ public:
 	static void PopulateBeginRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget) {
 		ImageMemoryBarrier(CB,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			RenderTarget, 
-			0, VK_ACCESS_TRANSFER_READ_BIT, 
+			RenderTarget,
+			0, VK_ACCESS_TRANSFER_READ_BIT,
 			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 	}
 	static void PopulateEndRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget, const VkImage Swapchain, const uint32_t Width, const uint32_t Height) {
 		ImageMemoryBarrier2(CB,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 
-			RenderTarget, 
-			0, VK_ACCESS_TRANSFER_READ_BIT, 
+			RenderTarget,
+			0, VK_ACCESS_TRANSFER_READ_BIT,
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			
-			Swapchain, 
-			0, VK_ACCESS_TRANSFER_WRITE_BIT, 
+
+			Swapchain,
+			0, VK_ACCESS_TRANSFER_WRITE_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		{
 			const std::array IC2s = {
@@ -889,10 +891,10 @@ public:
 			};
 			vkCmdCopyImage2(CB, &CII2);
 		}
-		ImageMemoryBarrier(CB, 
+		ImageMemoryBarrier(CB,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			Swapchain,
-			0, VK_ACCESS_TRANSFER_WRITE_BIT, 
+			0, VK_ACCESS_TRANSFER_WRITE_BIT,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 #pragma endregion
@@ -917,9 +919,76 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateSemaphore(VkDevice Dev) {
+#if false// USE_TIMELINESEMAPHORE
+		//!< VkPhysicalDeviceTimelineSemaphoreFeatures を有効にする必要がある
+		//!< タイムラインセマフォとして作成する例
+		constexpr VkSemaphoreTypeCreateInfo STCI = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+			.pNext = nullptr,
+			.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+			.initialValue = 0
+		};
+		const VkSemaphoreCreateInfo SCI = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+			.pNext = &STCI,
+			.flags = 0
+		};
+		//!< サブミットの例
+		//const std::array WaitSemValues = { uint64_t(0) };
+		//const std::array SignalSemValues = { uint64_t(0) };
+		//const VkTimelineSemaphoreSubmitInfo TSSI = {
+		//	.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+		//	.pNext = nullptr,
+		//	.waitSemaphoreValueCount = static_cast<uint32_t>(std::size(WaitSemValues)), .pWaitSemaphoreValues = std::data(WaitSemValues),
+		//	.signalSemaphoreValueCount = static_cast<uint32_t>(std::size(SignalSemValues)), .pSignalSemaphoreValues = std::data(SignalSemValues),
+		//};
+		//const std::array<VkSemaphore, 0> WaitSems = {};
+		//const std::array<VkPipelineStageFlags, 0> StageFlags = {};
+		//const std::array<VkCommandBuffer, 0> CBs = {};
+		//const std::array<VkSemaphore, 0> SignalSems = {};
+		//const std::array SIs = {
+		//	VkSubmitInfo({
+		//	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		//	.pNext = nullptr,
+		//	.waitSemaphoreCount = static_cast<uint32_t>(std::size(WaitSems)), .pWaitSemaphores = std::data(WaitSems), .pWaitDstStageMask = std::data(StageFlags),
+		//	.commandBufferCount = static_cast<uint32_t>(std::size(CBs)), .pCommandBuffers = std::data(CBs),
+		//	.signalSemaphoreCount = static_cast<uint32_t>(std::size(SignalSems)), .pSignalSemaphores = std::data(SignalSems)
+		//	})
+		//};
+		//vkQueueSubmit(Queue, static_cast<uint32_t>(std::size(SIs)), std::data(SIs), Fence);
+
+		//!< 現在の値の取得例
+		//uint64_t Value;
+		//vkGetSemaphoreCounterValue(Dev, TimelineSemaphore, &Value);
+
+		//!< CPU からシグナルする例
+		//const VkSemaphoreSignalInfo SSI = {
+		//	.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
+		//	.pNext = nullptr,
+		//	.semaphore = TimelineSemaphore,
+		//	.value = 0
+		//};
+		//vkSignalSemaphore(Dev, &SSI);
+
+		//!< CPU で待つ例 (フェンスの代替)
+		//const std::array Sems = { TimelineSemaphore };
+		//const std::array Vals = { uint64_t(0) };
+		//const VkSemaphoreWaitInfo SWI = {
+		//	.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+		//	.pNext = nullptr,
+		//	.flags = 0,
+		//	.semaphoreCount = static_cast<uint32_t>(std::size(Sems)), .pSemaphores = std::data(Sems), .pValues = std::data(Vals)
+		//};
+		//vkWaitSemaphores(Dev, &SWI, (std::numeric_limits<uint64_t>::max)());
+#else
 		//!< キューの同期(異なるキュー間の同期も可能) (Synchronization internal queue)
 		//!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
-		constexpr VkSemaphoreCreateInfo SCI = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = nullptr, .flags = 0 };
+		constexpr VkSemaphoreCreateInfo SCI = { 
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 
+			.pNext = nullptr,
+			.flags = 0
+		};
+#endif
 		//!< プレゼント完了同期用 (Wait for presentation finish)
 		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
 		//!< 描画完了同期用 (Wait for render finish)
@@ -1272,6 +1341,95 @@ protected:
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 
+	struct VulkanFeature {
+		void* GetPtr() { return &PDV13F; }
+		VkPhysicalDeviceVulkan11Features PDV11F = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+			.pNext = nullptr,
+			.storageBuffer16BitAccess = VK_FALSE,
+			.uniformAndStorageBuffer16BitAccess = VK_FALSE,
+			.storagePushConstant16 = VK_FALSE,
+			.storageInputOutput16 = VK_FALSE,
+			.multiview = VK_FALSE,
+			.multiviewGeometryShader = VK_FALSE,
+			.multiviewTessellationShader = VK_FALSE,
+			.variablePointersStorageBuffer = VK_FALSE,
+			.variablePointers = VK_FALSE,
+			.protectedMemory = VK_FALSE,
+			.samplerYcbcrConversion = VK_FALSE,
+			.shaderDrawParameters = VK_FALSE
+		};
+		VkPhysicalDeviceVulkan12Features PDV12F = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+			.pNext = &PDV11F,
+			.samplerMirrorClampToEdge = VK_FALSE,
+			.drawIndirectCount = VK_FALSE,
+			.storageBuffer8BitAccess = VK_FALSE,
+			.uniformAndStorageBuffer8BitAccess = VK_FALSE,
+			.storagePushConstant8 = VK_FALSE,
+			.shaderBufferInt64Atomics = VK_FALSE,
+			.shaderSharedInt64Atomics = VK_FALSE,
+			.shaderFloat16 = VK_FALSE,
+			.shaderInt8 = VK_FALSE,
+			.descriptorIndexing = VK_FALSE,
+			.shaderInputAttachmentArrayDynamicIndexing = VK_FALSE,
+			.shaderUniformTexelBufferArrayDynamicIndexing = VK_FALSE,
+			.shaderStorageTexelBufferArrayDynamicIndexing = VK_FALSE,
+			.shaderUniformBufferArrayNonUniformIndexing = VK_FALSE,
+			.shaderSampledImageArrayNonUniformIndexing = VK_FALSE,
+			.shaderStorageBufferArrayNonUniformIndexing = VK_FALSE,
+			.shaderStorageImageArrayNonUniformIndexing = VK_FALSE,
+			.shaderInputAttachmentArrayNonUniformIndexing = VK_FALSE,
+			.shaderUniformTexelBufferArrayNonUniformIndexing = VK_FALSE,
+			.shaderStorageTexelBufferArrayNonUniformIndexing = VK_FALSE,
+			.descriptorBindingUniformBufferUpdateAfterBind = VK_FALSE,
+			.descriptorBindingSampledImageUpdateAfterBind = VK_FALSE,
+			.descriptorBindingStorageImageUpdateAfterBind = VK_FALSE,
+			.descriptorBindingStorageBufferUpdateAfterBind = VK_FALSE,
+			.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_FALSE,
+			.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_FALSE,
+			.descriptorBindingUpdateUnusedWhilePending = VK_FALSE,
+			.descriptorBindingPartiallyBound = VK_FALSE,
+			.descriptorBindingVariableDescriptorCount = VK_FALSE,
+			.runtimeDescriptorArray = VK_FALSE,
+			.samplerFilterMinmax = VK_FALSE,
+			.scalarBlockLayout = VK_FALSE,
+			.imagelessFramebuffer = VK_FALSE,
+			.uniformBufferStandardLayout = VK_FALSE,
+			.shaderSubgroupExtendedTypes = VK_FALSE,
+			.separateDepthStencilLayouts = VK_FALSE,
+			.hostQueryReset = VK_FALSE,
+			.timelineSemaphore = VK_TRUE,
+			.bufferDeviceAddress = VK_FALSE,
+			.bufferDeviceAddressCaptureReplay = VK_FALSE,
+			.bufferDeviceAddressMultiDevice = VK_FALSE,
+			.vulkanMemoryModel = VK_FALSE,
+			.vulkanMemoryModelDeviceScope = VK_FALSE,
+			.vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE,
+			.shaderOutputViewportIndex = VK_FALSE,
+			.shaderOutputLayer = VK_FALSE,
+			.subgroupBroadcastDynamicId = VK_FALSE, 
+		};
+		VkPhysicalDeviceVulkan13Features PDV13F = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+			.pNext = &PDV12F,
+			.robustImageAccess = VK_FALSE,
+			.inlineUniformBlock = VK_FALSE,
+			.descriptorBindingInlineUniformBlockUpdateAfterBind = VK_FALSE,
+			.pipelineCreationCacheControl = VK_FALSE,
+			.privateData = VK_FALSE,
+			.shaderDemoteToHelperInvocation = VK_FALSE,
+			.shaderTerminateInvocation = VK_FALSE,
+			.subgroupSizeControl = VK_FALSE,
+			.computeFullSubgroups = VK_FALSE,
+			.synchronization2 = VK_TRUE,
+			.textureCompressionASTC_HDR = VK_FALSE,
+			.shaderZeroInitializeWorkgroupMemory = VK_FALSE,
+			.dynamicRendering = VK_TRUE,
+			.shaderIntegerDotProduct = VK_FALSE,
+			.maintenance4 = VK_TRUE, 
+		};
+	};
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;

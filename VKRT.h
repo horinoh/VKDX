@@ -39,16 +39,12 @@ protected:
 			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-#ifdef USE_SYNCHRONIZATION2
 			VkPhysicalDeviceSynchronization2Features PDS2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES, .pNext = nullptr, .synchronization2 = VK_TRUE };
 			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = &PDS2, .bufferDeviceAddress = VK_TRUE };
-#else
-			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr, .bufferDeviceAddress = VK_TRUE };
-#endif
 			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF, .rayTracingPipeline = VK_TRUE, .rayTracingPipelineTraceRaysIndirect = VK_TRUE };
 			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF, .accelerationStructure = VK_TRUE };
 			VkPhysicalDeviceDescriptorIndexingFeatures PDDIF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, .pNext = &PDASF, .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE, .shaderSampledImageArrayNonUniformIndexing = VK_TRUE, .runtimeDescriptorArray = VK_TRUE };
-			Super::CreateDevice(hWnd, hInstance, &PDDIF/*PDASF*/, {
+			Super::CreateDevice(hWnd, hInstance, &PDDIF, {
 				VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 				VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 				VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,

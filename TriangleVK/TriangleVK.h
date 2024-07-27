@@ -48,7 +48,7 @@ protected:
 #else
 		StagingBuffer Staging_Vertex;
 #endif
-		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
+		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), std::data(Vertices));
 
 #ifdef USE_DEBUG_UTILS
 		SetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
@@ -60,12 +60,12 @@ protected:
 #else
 		StagingBuffer Staging_Index;
 #endif
-		Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
+		Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices), std::data(Indices));
 
 #ifdef USE_DEBUG_UTILS
 		SetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
-		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(std::size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
 #ifdef USE_DEBUG_UTILS
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
