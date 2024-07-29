@@ -920,72 +920,98 @@ protected:
 	}
 	virtual void CreateSemaphore(VkDevice Dev) {
 #if false// USE_TIMELINESEMAPHORE
-		//!< VkPhysicalDeviceTimelineSemaphoreFeatures を有効にする必要がある
-		//!< タイムラインセマフォとして作成する例
-		constexpr VkSemaphoreTypeCreateInfo STCI = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
-			.pNext = nullptr,
-			.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
-			.initialValue = 0
-		};
-		const VkSemaphoreCreateInfo SCI = {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-			.pNext = &STCI,
-			.flags = 0
-		};
-		//!< サブミットの例
-		//const std::array WaitSemValues = { uint64_t(0) };
-		//const std::array SignalSemValues = { uint64_t(0) };
-		//const VkTimelineSemaphoreSubmitInfo TSSI = {
-		//	.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-		//	.pNext = nullptr,
-		//	.waitSemaphoreValueCount = static_cast<uint32_t>(std::size(WaitSemValues)), .pWaitSemaphoreValues = std::data(WaitSemValues),
-		//	.signalSemaphoreValueCount = static_cast<uint32_t>(std::size(SignalSemValues)), .pSignalSemaphoreValues = std::data(SignalSemValues),
-		//};
-		//const std::array WaitSems = {...};
-		//const std::array StageFlags = {...};
-		//const std::array CBs = {...};
-		//const std::array SignalSems = {...};
-		//const std::array SIs = {
-		//	VkSubmitInfo({
-		//	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		//	.pNext = &TSSI,
-		//	.waitSemaphoreCount = static_cast<uint32_t>(std::size(WaitSems)), .pWaitSemaphores = std::data(WaitSems), .pWaitDstStageMask = std::data(StageFlags),
-		//	.commandBufferCount = static_cast<uint32_t>(std::size(CBs)), .pCommandBuffers = std::data(CBs),
-		//	.signalSemaphoreCount = static_cast<uint32_t>(std::size(SignalSems)), .pSignalSemaphores = std::data(SignalSems)
-		//	})
-		//};
-		//vkQueueSubmit(Queue, static_cast<uint32_t>(std::size(SIs)), std::data(SIs), Fence);
+#include <thread>
+#include <chrono>
+		VkSemaphore TimelineSemaphore = VK_NULL_HANDLE;
+		{
+			constexpr VkSemaphoreTypeCreateInfo STCI = {
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+				.pNext = nullptr,
+				.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+				.initialValue = 0
+			};
+			const VkSemaphoreCreateInfo SCI = {
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+				.pNext = &STCI,
+				.flags = 0
+			};
+			VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SCI, nullptr, &TimelineSemaphore));
+		}
+		//!< (1) [ GPU ] (2) で (CPU から) 値へ 2 が書き込まれれば処理が進み、完了すれば (GPU から) 値へ 3 が書き込まれる
+		{
+			//!< 値が >= 2 になるまで待つ
+			const std::array WaitSSIs = {
+				VkSemaphoreSubmitInfo({.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, .pNext = nullptr, .semaphore = TimelineSemaphore, .value = 2, .stageMask = VK_PIPELINE_STAGE_2_NONE, .deviceIndex = 0 })
+			};
+			constexpr std::array<VkCommandBufferSubmitInfo, 0> CBSIs = {};
+			//!< 完了時に値を 3 にする
+			const std::array SignalSSIs = {
+				VkSemaphoreSubmitInfo({.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, .pNext = nullptr, .semaphore = TimelineSemaphore, .value = 3, .stageMask = VK_PIPELINE_STAGE_2_NONE, .deviceIndex = 0 })
+			};
+			const std::array SIs = {
+				VkSubmitInfo2({
+					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+					.pNext = nullptr,
+					.flags = 0,
+					.waitSemaphoreInfoCount = static_cast<uint32_t>(std::size(WaitSSIs)), .pWaitSemaphoreInfos = std::data(WaitSSIs),
+					.commandBufferInfoCount = static_cast<uint32_t>(std::size(CBSIs)), .pCommandBufferInfos = std::data(CBSIs),
+					.signalSemaphoreInfoCount = static_cast<uint32_t>(std::size(SignalSSIs)), .pSignalSemaphoreInfos = std::data(SignalSSIs)
+				})
+			};
+			VERIFY_SUCCEEDED(vkQueueSubmit2(GraphicsQueue.first, static_cast<uint32_t>(std::size(SIs)), std::data(SIs), VK_NULL_HANDLE));
+			std::cout << "[GPU] Wait timelineSemaphore value >= " << WaitSSIs.back().value << ", and set value = " << SignalSSIs.back().value << " on finished" << std::endl;
+		}
+		//!< (2) [CPU] 3秒待った後に、(CPU から) 値を 2 へセットする
+		auto Thread = std::thread([&]() {
+			std::cout << "[CPU] Sleep 3 seconds" << std::endl;
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 
-		//!< 現在の値の取得例
-		//uint64_t Value;
-		//vkGetSemaphoreCounterValue(Dev, TimelineSemaphore, &Value);
-
-		//!< CPU からシグナルする例
-		//const VkSemaphoreSignalInfo SSI = {
-		//	.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
-		//	.pNext = nullptr,
-		//	.semaphore = TimelineSemaphore,
-		//	.value = 0
-		//};
-		//vkSignalSemaphore(Dev, &SSI);
-
-		//!< CPU で待つ例 (フェンスの代替)
-		//const std::array Sems = { TimelineSemaphore };
-		//const std::array Vals = { uint64_t(0) };
-		//const VkSemaphoreWaitInfo SWI = {
-		//	.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-		//	.pNext = nullptr,
-		//	.flags = 0,
-		//	.semaphoreCount = static_cast<uint32_t>(std::size(Sems)), .pSemaphores = std::data(Sems), .pValues = std::data(Vals)
-		//};
-		//vkWaitSemaphores(Dev, &SWI, (std::numeric_limits<uint64_t>::max)());
+			//!< 値を 2 にする
+			const VkSemaphoreSignalInfo SSI = {
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
+				.pNext = nullptr,
+				.semaphore = TimelineSemaphore,
+				.value = 2
+			};
+			VERIFY_SUCCEEDED(vkSignalSemaphore(Device, &SSI));
+			std::cout << "[CPU] Set timelineSemaphore value = " << SSI.value << std::endl;
+			});
+		//!< (3) [ CPU ] (2) で (CPU から) 値へ 2 が書き込まれれば処理が進む
+		{
+			//!< 値が >= 1 になるまで待つ
+			const std::array WaitSemaphores = { TimelineSemaphore };
+			const std::array WaitValues = { uint64_t(1) };
+			const VkSemaphoreWaitInfo SWI = {
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.semaphoreCount = static_cast<uint32_t>(std::size(WaitSemaphores)), .pSemaphores = std::data(WaitSemaphores), .pValues = std::data(WaitValues)
+			};
+			VERIFY_SUCCEEDED(vkWaitSemaphores(Device, &SWI, (std::numeric_limits<uint64_t>::max)()));
+			std::cout << "[CPU] Wait timelineSemaphore value >= " << WaitValues.back() << " finished" << std::endl;
+		}
+		//!< (4) [ CPU ] (3) の処理が終わればここに来る、理屈ではタイミングにより 2 または 3 になるが (GPU処理が速いせいかほとんど 3 になる模様)
+		{
+			uint64_t Value;
+			VERIFY_SUCCEEDED(vkGetSemaphoreCounterValue(Device, TimelineSemaphore, &Value));
+			std::cout << "[CPU] Get timelineSemaphore value = " << Value << std::endl;
+		}
+		Thread.join();
+		if (VK_NULL_HANDLE != TimelineSemaphore) {
+			vkDestroySemaphore(Device, TimelineSemaphore, nullptr);
+		}
 #else
 		//!< キューの同期(異なるキュー間の同期も可能) (Synchronization internal queue)
 		//!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
-		constexpr VkSemaphoreCreateInfo SCI = { 
+		constexpr VkSemaphoreTypeCreateInfo STCI = {
+				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+				.pNext = nullptr,
+				.semaphoreType = VK_SEMAPHORE_TYPE_BINARY,
+				.initialValue = 0
+		};
+		const VkSemaphoreCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 
-			.pNext = nullptr,
+			.pNext = &STCI,
 			.flags = 0
 		};
 #endif
