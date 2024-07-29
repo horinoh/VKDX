@@ -942,14 +942,14 @@ protected:
 		//	.waitSemaphoreValueCount = static_cast<uint32_t>(std::size(WaitSemValues)), .pWaitSemaphoreValues = std::data(WaitSemValues),
 		//	.signalSemaphoreValueCount = static_cast<uint32_t>(std::size(SignalSemValues)), .pSignalSemaphoreValues = std::data(SignalSemValues),
 		//};
-		//const std::array<VkSemaphore, 0> WaitSems = {};
-		//const std::array<VkPipelineStageFlags, 0> StageFlags = {};
-		//const std::array<VkCommandBuffer, 0> CBs = {};
-		//const std::array<VkSemaphore, 0> SignalSems = {};
+		//const std::array WaitSems = {...};
+		//const std::array StageFlags = {...};
+		//const std::array CBs = {...};
+		//const std::array SignalSems = {...};
 		//const std::array SIs = {
 		//	VkSubmitInfo({
 		//	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		//	.pNext = nullptr,
+		//	.pNext = &TSSI,
 		//	.waitSemaphoreCount = static_cast<uint32_t>(std::size(WaitSems)), .pWaitSemaphores = std::data(WaitSems), .pWaitDstStageMask = std::data(StageFlags),
 		//	.commandBufferCount = static_cast<uint32_t>(std::size(CBs)), .pCommandBuffers = std::data(CBs),
 		//	.signalSemaphoreCount = static_cast<uint32_t>(std::size(SignalSems)), .pSignalSemaphores = std::data(SignalSems)
