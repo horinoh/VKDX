@@ -97,7 +97,7 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto Extent = VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 });
 		//!< カラー(Color)
-		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, Extent);
+		RenderTextures.emplace_back().Create(Device, PDMP, SurfaceFormat.format, Extent);
 #pragma region MRT 
 		//!< 法線(Normal)
 		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_A2B10G10R10_UNORM_PACK32, Extent);
@@ -164,7 +164,7 @@ protected:
 				//!< カラー(Color)
 				VkAttachmentDescription({
 					.flags = 0,
-					.format = ColorFormat,
+					.format = SurfaceFormat.format,
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,

@@ -34,7 +34,7 @@ protected:
 		CreateTexture_Depth(SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 	void CreateTexture_Render(const uint32_t Width, const uint32_t Height) {
-		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
+		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), SurfaceFormat.format, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
 	void CreateTexture_Render() {
 		CreateTexture_Render(SurfaceExtent2D.width, SurfaceExtent2D.height);

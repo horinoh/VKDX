@@ -220,7 +220,7 @@ protected:
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 					VkAttachmentDescription({
 						.flags= 0,
-						.format = ColorFormat,
+						.format = SurfaceFormat.format,
 						.samples = VK_SAMPLE_COUNT_1_BIT,
 #ifdef USE_SHADOWMAP_VISUALIZE
 						.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,

@@ -1486,7 +1486,7 @@ protected:
 	VkSemaphore ComputeSemaphore = VK_NULL_HANDLE;
 
 	VkExtent2D SurfaceExtent2D;
-	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+	VkSurfaceFormatKHR SurfaceFormat;
 
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	uint32_t SwapchainImageIndex = 0;

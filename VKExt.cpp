@@ -11,7 +11,7 @@ void VKExt::CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp, const VkIm
 		{
 			VkAttachmentDescription({
 				.flags = 0,
-				.format = ColorFormat,
+				.format = SurfaceFormat.format,
 				.samples = VK_SAMPLE_COUNT_1_BIT,
 				.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,	
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -59,7 +59,7 @@ void VKExt::CreateRenderPass_Depth(const VkImageLayout FinalLayout)
 	Super::CreateRenderPass(RenderPasses.emplace_back(), {
 		VkAttachmentDescription({
 			.flags = 0,
-			.format = ColorFormat,
+			.format = SurfaceFormat.format,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
