@@ -156,14 +156,16 @@ protected:
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				const std::array CHs = { RAH.second };
+				CL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 				const auto& DescSRV = CbvSrvUavDescs[0];
 				const auto& HeapSRV = DescSRV.first;
@@ -171,7 +173,7 @@ protected:
 
 #ifdef USE_STATIC_SAMPLER
 				const std::array DHs = { COM_PTR_GET(HeapSRV) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 				CL->SetGraphicsRootDescriptorTable(0, HandleSRV[0]); //!< SRV
 #else
 				auto DescSMP = SamplerDescs[0];
@@ -179,7 +181,7 @@ protected:
 				auto HandleSMP = DescSMP.second;
 
 				const std::array DHs = { COM_PTR_GET(HeapSRV), COM_PTR_GET(HeapSMP) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 				CL->SetGraphicsRootDescriptorTable(0, HandleSRV[0]); //!< SRV
 				CL->SetGraphicsRootDescriptorTable(1, HandleSMP[0]); //!< Sampler
 #endif

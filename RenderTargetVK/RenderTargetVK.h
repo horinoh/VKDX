@@ -27,7 +27,7 @@ protected:
 
 #pragma region PASS1
 		const auto SCP = SecondaryCommandPools[0];
-		const auto Count = static_cast<uint32_t>(size(SwapchainBackBuffers));
+		const auto Count = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews));
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto Prev = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(Prev + Count);
@@ -209,7 +209,7 @@ protected:
 #endif
 
 #pragma region PASS0
-		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], Swapchain.Extent, 1, {
 			RenderTextures.back().View,
 #ifdef USE_DEPTH
 			DepthTextures.back().View,
@@ -218,8 +218,8 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		for (const auto& i : SwapchainBackBuffers) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
+		for (const auto& i : Swapchain.ImageAndViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], Swapchain.Extent, 1, { i.second });
 		}
 #pragma endregion
 	}
@@ -304,7 +304,7 @@ protected:
 	void PopulateSecondaryCommandBuffer_Pass1(const size_t i) {
 		//!< レンダーテクスチャ描画用
 		const auto RP = RenderPasses[1];
-		const auto SCCount = size(SwapchainBackBuffers);
+		const auto SCCount = std::size(Swapchain.ImageAndViews);
 		const auto SCB = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -349,7 +349,7 @@ protected:
 
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
-		const auto SCCount = size(SwapchainBackBuffers);
+		const auto SCCount = std::size(Swapchain.ImageAndViews);
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount];
 
 #ifdef USE_SUBPASS
@@ -364,7 +364,7 @@ protected:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
+			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent });
 
 #pragma region PASS0
 			//!< メッシュ描画用セカンダリコマンドバッファを発行

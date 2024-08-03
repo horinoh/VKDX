@@ -1025,11 +1025,11 @@ protected:
 
 	virtual void AllocatePrimaryCommandBuffer(const size_t Count);
 	void AllocatePrimaryCommandBuffer() {
-		AllocatePrimaryCommandBuffer(std::size(SwapchainBackBuffers));
+		AllocatePrimaryCommandBuffer(std::size(Swapchain.ImageAndViews));
 	}
 	void AllocateSecondaryCommandBuffer(const size_t Count);
 	virtual void AllocateSecondaryCommandBuffer() {
-		AllocateSecondaryCommandBuffer(std::size(SwapchainBackBuffers));
+		AllocateSecondaryCommandBuffer(std::size(Swapchain.ImageAndViews));
 	}
 	virtual void AllocateComputeCommandBuffer();
 	virtual void AllocateCommandBuffer() {
@@ -1049,6 +1049,9 @@ protected:
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
+	virtual void CreateViewport(const VkExtent2D& Extent, const float MinDepth = 0.0f, const float MaxDepth = 1.0f) { 
+		CreateViewport(static_cast<const float>(Extent.width), static_cast<const float>(Extent.height), MinDepth, MaxDepth); 
+	}
 
 	virtual void LoadScene() {}
 
@@ -1145,10 +1148,11 @@ protected:
 	virtual void CreateRenderPass() {}
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs);
+	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const VkExtent2D& Ext, const uint32_t Layers, const std::vector<VkImageView>& IVs) { CreateFramebuffer(FB, RP, Ext.width, Ext.height, Layers, IVs); }
 	virtual void CreateFramebuffer() {
 		const auto RP = RenderPasses[0];
-		for (const auto& i : SwapchainBackBuffers) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
+		for (const auto& i : Swapchain.ImageAndViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, Swapchain.Extent, 1, { i.second });
 		}
 	}
 
@@ -1271,12 +1275,14 @@ protected:
 	virtual void PopulateSecondaryCommandBuffer([[maybe_unused]] const size_t i) {}
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
 
-	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }
-	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
+	virtual uint32_t GetCurrentBackBufferIndex() const { return Swapchain.Index; }
+
+	virtual void OnUpdate([[maybe_unused]] const uint32_t i) {}
 	static void WaitForFence(VkDevice Device, VkFence Fence);
 	virtual void SubmitGraphics(const uint32_t i);
 	virtual void SubmitCompute(const uint32_t i);
 	virtual void Present();
+
 	virtual void Draw();
 	virtual void Dispatch();
 	
@@ -1485,18 +1491,18 @@ protected:
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 	VkSemaphore ComputeSemaphore = VK_NULL_HANDLE;
 
-	VkExtent2D SurfaceExtent2D;
 	VkSurfaceFormatKHR SurfaceFormat;
 
-	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
-	uint32_t SwapchainImageIndex = 0;
-	struct SwapchainBackBuffer 
-	{
-		SwapchainBackBuffer(VkImage Img) { Image = Img; }
-		VkImage Image;
-		VkImageView ImageView;
+	//!< [DX] <ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE> 相当
+	//!< [DX] <ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE> 相当
+	using ImageAndView = std::pair<VkImage, VkImageView>;
+	struct Swapchain {
+		VkSwapchainKHR VkSwapchain = VK_NULL_HANDLE;
+		std::vector<ImageAndView> ImageAndViews; 
+		uint32_t Index = 0;
+		VkExtent2D Extent;
 	};
-	std::vector<SwapchainBackBuffer> SwapchainBackBuffers;
+	Swapchain Swapchain;
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;

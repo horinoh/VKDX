@@ -358,7 +358,7 @@ public:
 
 				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
-			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainBackBuffers[i].Resource));
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChain.ResourceAndHandles[i].first));
 		} VERIFY_SUCCEEDED(CL->Close());
 	}
 };

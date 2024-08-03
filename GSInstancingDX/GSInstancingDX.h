@@ -70,14 +70,16 @@ protected:
 			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				const std::array CHs = { RAH.second };
+				GCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 				GCL->ExecuteBundle(BCL);
 			}

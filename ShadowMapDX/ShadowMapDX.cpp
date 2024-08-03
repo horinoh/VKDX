@@ -267,7 +267,8 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
-		const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+		const auto& RAH = SwapChain.ResourceAndHandles[i];
+		const auto SCR = COM_PTR_GET(RAH.first);
 		const auto IR = COM_PTR_GET(DepthTextures[0].Resource);
 
 		//!< パス0 : (シャドウキャスタ描画用)
@@ -276,18 +277,18 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 			const std::array VPs = { D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = static_cast<FLOAT>(ShadowMapExtentW), .Height = static_cast<FLOAT>(ShadowMapExtentH), .MinDepth = 0.0f, .MaxDepth = 1.0f }) };
 			const std::array SCs = { D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(ShadowMapExtentW), .bottom = static_cast<LONG>(ShadowMapExtentH) }) };
-			GCL->RSSetViewports(static_cast<UINT>(size(VPs)), data(VPs));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(SCs)), data(SCs));
+			GCL->RSSetViewports(static_cast<UINT>(std::size(VPs)), std::data(VPs));
+			GCL->RSSetScissorRects(static_cast<UINT>(std::size(SCs)), std::data(SCs));
 
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
+				GCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(std::size(Rects)), std::data(Rects)); //!< DSV(0)
 			}
 			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 0> RtvDHs = {};
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &HandleDSV[0]); //!< DSV(0)
+				GCL->OMSetRenderTargets(static_cast<UINT>(std::size(RtvDHs)), std::data(RtvDHs), FALSE, &HandleDSV[0]); //!< DSV(0)
 			}
 			{
 				const auto& Desc = CbvSrvUavDescs[0];
@@ -295,7 +296,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				const auto& Handle = Desc.second;
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 
 				GCL->SetGraphicsRootDescriptorTable(0, Handle[0]); //!< CBV(0)
 			}
@@ -318,17 +319,17 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
 				}),
 			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			GCL->ResourceBarrier(static_cast<UINT>(std::size(RBs)), std::data(RBs));
 		}
 
 		//!< パス1 : (レンダーテクスチャ描画用、シャドウレシーバ描画用)
 		{
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			GCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);			
+			auto ScCDH = SwapChain.DescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChain.DescriptorHeap->GetDesc().Type);			
 #ifndef USE_SHADOWMAP_VISUALIZE
 			const auto& DsvDH = DsvDescriptorHeaps[0];
 			auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
@@ -342,9 +343,9 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 			{
 				const std::array RtvDHs = { ScCDH };
 #ifdef USE_SHADOWMAP_VISUALIZE
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, nullptr);
+				GCL->OMSetRenderTargets(static_cast<UINT>(std::size(RtvDHs)), std::data(RtvDHs), FALSE, nullptr);
 #else
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(1)
+				GCL->OMSetRenderTargets(static_cast<UINT>(std::size(RtvDHs)), std::data(RtvDHs), FALSE, &DsvCDH); //!< DSV(1)
 #endif
 			}
 			{
@@ -353,10 +354,10 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				const auto& Handle = Desc.second;
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 
 				DXGI_SWAP_CHAIN_DESC1 SCD;
-				SwapChain->GetDesc1(&SCD);
+				SwapChain.DxSwapChain->GetDesc1(&SCD);
 
 #pragma region FRAME_OBJECT
 				GCL->SetGraphicsRootDescriptorTable(0, Handle[i]); //!< CBV
@@ -388,7 +389,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE })
 				}),
 			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			GCL->ResourceBarrier(static_cast<UINT>(std::size(RBs)), std::data(RBs));
 		}
 	}
 	VERIFY_SUCCEEDED(GCL->Close());

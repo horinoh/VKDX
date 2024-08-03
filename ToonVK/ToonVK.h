@@ -22,7 +22,7 @@ public:
 	virtual ~ToonVK() {}
 
 protected:
-	virtual void DrawFrame(const uint32_t i) override {
+	virtual void OnUpdate(const uint32_t i) override {
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 
 		if (IsUpdate()) {
@@ -49,7 +49,7 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
-		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -113,7 +113,7 @@ protected:
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			//!< UB * N
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }) 
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews)) }) 
 #pragma endregion
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -124,7 +124,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
@@ -139,7 +139,7 @@ protected:
 		}, DescriptorSetLayouts[0]);
 
 #pragma region FRAME_OBJECT
-		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
+		for (size_t i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DBI);
 		}
@@ -203,7 +203,7 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP,
 				.framebuffer = FB,
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
 				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs),
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {

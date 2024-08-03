@@ -14,7 +14,7 @@ public:
 	virtual ~DeferredDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 
 		if (IsUpdate()) {
@@ -29,7 +29,7 @@ protected:
 		Super::CreateCommandList();
 #pragma region PASS1 (Draw fullscreen)
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
@@ -85,7 +85,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 		}
@@ -268,7 +268,7 @@ protected:
 	virtual void CreateDescriptor() override {
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 #pragma endregion
 
 #pragma region PASS0 (Draw mesh)
@@ -458,11 +458,14 @@ protected:
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 		{
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			GCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
+
 
 #pragma region PASS0 (Draw mesh)
 			auto Pass = 0;
@@ -479,13 +482,13 @@ protected:
 				//!< クリア
 				{
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
-					GCL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), std::data(Rects));
 #pragma region MRT
-					GCL->ClearRenderTargetView(HandleRTV[1], data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects));
-					GCL->ClearRenderTargetView(HandleRTV[2], DirectX::Colors::Red, static_cast<UINT>(size(Rects)), data(Rects));
-					GCL->ClearRenderTargetView(HandleRTV[3], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearRenderTargetView(HandleRTV[1], std::data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(std::size(Rects)), data(Rects));
+					GCL->ClearRenderTargetView(HandleRTV[2], DirectX::Colors::Red, static_cast<UINT>(std::size(Rects)), std::data(Rects));
+					GCL->ClearRenderTargetView(HandleRTV[3], DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #pragma endregion
-					GCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 				}
 
 				//!< レンダーターゲット
@@ -498,7 +501,7 @@ protected:
 					//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」で良い
 					const std::array CHs = { HandleRTV[0] };
 					//!< RTV, DSV
-					GCL->OMSetRenderTargets(4, data(CHs), TRUE, &HandleDSV[0]);
+					GCL->OMSetRenderTargets(4, std::data(CHs), TRUE, &HandleDSV[0]);
 #endif
 				}
 
@@ -508,7 +511,7 @@ protected:
 					const auto& Handle = Desc.second;
 
 					const std::array DHs = { COM_PTR_GET(Heap) };
-					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					GCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 #pragma region FRAME_OBJECT
 					//!< CBV
 					GCL->SetGraphicsRootDescriptorTable(0, Handle[i]);
@@ -544,8 +547,8 @@ protected:
 			{
 				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[Pass]));
 
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr); 
+				const std::array CHs = { RAH.second };
+				GCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr); 
 
 				{
 					const auto& Desc = CbvSrvUavDescs[Pass];
@@ -553,7 +556,7 @@ protected:
 					const auto& Handle = Desc.second;
 
 					const std::array DHs = { COM_PTR_GET(Heap) };
-					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					GCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 					
 					//!< SRV
 					GCL->SetGraphicsRootDescriptorTable(0, Handle[0]);
@@ -585,7 +588,7 @@ protected:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
 					}),
 				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+				GCL->ResourceBarrier(static_cast<UINT>(std::size(RBs)), std::data(RBs));
 			}
 		}
 		VERIFY_SUCCEEDED(GCL->Close());

@@ -16,7 +16,7 @@ public:
 
 protected:
 protected:
-	virtual void DrawFrame(const uint32_t Index) override {
+	virtual void OnUpdate(const uint32_t Index) override {
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
 #else
@@ -42,7 +42,7 @@ protected:
 	}
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
-		for([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tracking));
 		}
 	}
@@ -119,7 +119,7 @@ protected:
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }),
 #pragma endregion
 #pragma region UB
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews))}),
 #pragma endregion
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -130,7 +130,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region UB
-		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
@@ -168,7 +168,7 @@ protected:
 #pragma endregion
 		}, DescriptorSetLayouts[0]);
 #pragma region UB
-		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
+		for (size_t i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = Textures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #pragma region SECOND_TEXTURE

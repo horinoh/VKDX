@@ -22,7 +22,7 @@ public:
 	virtual ~CubeMapDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		const auto CamPos = DirectX::XMVector3Transform(DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 #ifdef USE_SKY_DOME
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, DirectX::XMVectorSet(0.0f, 2.0f * DirectX::XMScalarSin(DirectX::XMConvertToRadians(Degree)), 0.0f, 1.0f), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
@@ -67,7 +67,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 		}
@@ -169,7 +169,7 @@ protected:
 		{
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N, SRV0, SRV1
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
@@ -182,7 +182,7 @@ protected:
 			//!< CBV
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH);
@@ -226,24 +226,25 @@ protected:
 		{
 			DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #ifndef USE_SKY_DOME
-				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #endif
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
+				const std::array CHs = { RAH.second };
 #ifdef USE_SKY_DOME
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 #else
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, &HandleDSV[0]);
 #endif
 				{
 					const auto& Desc = CbvSrvUavDescs[0];
@@ -259,13 +260,13 @@ protected:
 #pragma endregion
 					//!< SRV0, SRV1
 					DXGI_SWAP_CHAIN_DESC1 SCD;
-					SwapChain->GetDesc1(&SCD);
+					SwapChain.DxSwapChain->GetDesc1(&SCD);
 					DCL->SetGraphicsRootDescriptorTable(1, Handle[SCD.BufferCount]);
 				}
 
 				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(DCL->Close());
 	}

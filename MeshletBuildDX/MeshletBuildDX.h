@@ -186,18 +186,20 @@ public:
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				if (HasMS) {
 					const auto& HandleDSV = DsvDescs[0].second;
 
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
-					CL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-					CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+					CL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
+					CL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 
-					const std::array CHs = { SwapChainBackBuffers[i].Handle };
-					CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
+					const std::array CHs = { RAH.second };
+					CL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, &HandleDSV[0]);
 
 					{
 						const auto& Desc = CbvSrvUavDescs[0];
@@ -205,7 +207,7 @@ public:
 						const auto& Handle = Desc.second;
 
 						const std::array DHs = { COM_PTR_GET(Heap) };
-						CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+						CL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 						CL->SetGraphicsRootDescriptorTable(0, Handle[0]);
 					}
 
@@ -213,7 +215,7 @@ public:
 				}
 				else {
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
-					CL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					CL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 				}
 			}
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

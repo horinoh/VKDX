@@ -51,18 +51,19 @@ public:
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				if (HasMS) {
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
-					CL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					CL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 
-					const std::array CHs = { SwapChainBackBuffers[i].Handle };
-					CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+					const std::array CHs = { RAH.second };
+					CL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 #ifdef USE_INDIRECT
 					CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
@@ -74,10 +75,10 @@ public:
 				}
 				else {
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
-					CL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					CL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 				}
 			}
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(CL->Close());
 	}

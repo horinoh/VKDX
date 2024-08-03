@@ -14,7 +14,7 @@ public:
 	virtual ~DeferredVK() {}
 
 protected:
-	virtual void DrawFrame(const uint32_t i) override {
+	virtual void OnUpdate(const uint32_t i) override {
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 
 		if (IsUpdate()) {
@@ -28,7 +28,7 @@ protected:
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
+		const auto SCCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews));
 #pragma region PASS1 (Draw fullscreen)
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
@@ -88,14 +88,14 @@ protected:
 		Tr = Transform({ Projection, View, World, InverseViewProjection });
 
 #pragma region FRAME_OBJECT
-		for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		const auto Extent = VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 });
+		const auto Extent = VkExtent3D({ .width = Swapchain.Extent.width, .height = Swapchain.Extent.height, .depth = 1 });
 		//!< カラー(Color)
 		RenderTextures.emplace_back().Create(Device, PDMP, SurfaceFormat.format, Extent);
 #pragma region MRT 
@@ -372,7 +372,7 @@ protected:
 	virtual void CreateFramebuffer() override {
 #pragma region PASS0 (Draw mesh)
 		{
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], Swapchain.Extent, 1, {
 				//!< カラー (Color)
 				RenderTextures[0].View,
 #pragma region MRT 
@@ -391,8 +391,8 @@ protected:
 
 #pragma region PASS1 (Draw fullscreen)
 		{
-			for (const auto& i : SwapchainBackBuffers) {
-				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
+			for (const auto& i : Swapchain.ImageAndViews) {
+				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], Swapchain.Extent, 1, { i.second });
 			}
 		}
 #pragma endregion
@@ -400,7 +400,7 @@ protected:
 	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) * 2 }), //!< UB * N * 2
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews)) * 2 }), //!< UB * N * 2
 #pragma endregion
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
@@ -418,7 +418,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+			for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -431,7 +431,7 @@ protected:
 					.offset = 0, .stride = sizeof(VkDescriptorBufferInfo)
 				}),
 				}, DescriptorSetLayouts[0]);
-			for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
+			for (size_t i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
 				const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DBI);
 			}
@@ -449,7 +449,7 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for ([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+			for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
@@ -507,7 +507,7 @@ protected:
 					.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 				}),
 				}, DescriptorSetLayouts[1]);
-			for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
+			for (size_t i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
 				const DescriptorUpdateInfo DUI = {
 					//!< レンダーターゲット : カラー(RenderTarget : Color)
 					VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
@@ -521,7 +521,7 @@ protected:
 #pragma endregion
 					VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 				};
-				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + size(SwapchainBackBuffers)], DUT, &DUI);
+				vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + std::size(Swapchain.ImageAndViews)], DUT, &DUI);
 			}
 			vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 #pragma endregion
@@ -574,7 +574,7 @@ protected:
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
+		const auto SCCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews));
 #pragma endregion
 		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 		{
@@ -619,7 +619,7 @@ protected:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			const VkRect2D RenderArea = { .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D };
+			const VkRect2D RenderArea = { .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent };
 
 #pragma region PASS0 (Draw mesh)
 			//!< メッシュ描画用

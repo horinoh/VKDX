@@ -16,7 +16,7 @@ public:
 protected:
 	static const uint32_t W = 1280, H = 720;
 	std::array<uint32_t, W * H> TexPattern;
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		if (0 == i) {
 			std::random_device RndDev;
 			std::ranges::generate(TexPattern, [&]() { return RndDev(); });
@@ -164,12 +164,12 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP,
 				.framebuffer = FB,
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
-				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
+				.clearValueCount = static_cast<uint32_t>(std::size(CVs)), .pClearValues = std::data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				const std::array SCBs = { SCB };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(std::size(SCBs)), std::data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}

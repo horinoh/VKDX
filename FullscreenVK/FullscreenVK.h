@@ -103,12 +103,12 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP,
 				.framebuffer = FB,
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
-				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
+				.clearValueCount = static_cast<uint32_t>(std::size(CVs)), .pClearValues = std::data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				const std::array SCBs = { SCB };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(std::size(SCBs)), std::data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}

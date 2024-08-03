@@ -22,7 +22,7 @@ public:
 	virtual ~ToonDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 
 		if (IsUpdate()) {
@@ -54,7 +54,7 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 		}
@@ -127,7 +127,7 @@ protected:
 
 		{
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
 			//!< CBV * N
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; 
@@ -139,7 +139,7 @@ protected:
 			auto GDH = Heap->GetGPUDescriptorHandleForHeapStart();
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
@@ -174,24 +174,25 @@ protected:
 		{
 			DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #ifdef USE_DEPTH
-				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(std::size(Rects)), data(Rects));
 #endif
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
+				const std::array CHs = { RAH.second };
 #ifdef USE_DEPTH
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, &HandleDSV[0]);
 #else
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 #endif
 				{
 					const auto& Desc = CbvSrvUavDescs[0];
@@ -199,14 +200,14 @@ protected:
 					const auto& Handle = Desc.second;
 
 					const std::array DHs = { COM_PTR_GET(Heap) };
-					DCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					DCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 #pragma region FRAME_OBJECT
 					DCL->SetGraphicsRootDescriptorTable(0, Handle[i]);
 #pragma endregion
 				}
 				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(DCL->Close());
 	}

@@ -19,7 +19,7 @@ protected:
 	virtual void CreateTexture() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
 	}
 	virtual void CreateRootSignature() override {

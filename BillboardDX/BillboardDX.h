@@ -15,7 +15,7 @@ public:
 	virtual ~BillboardDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
@@ -45,7 +45,7 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 		}
@@ -111,7 +111,7 @@ protected:
 		{
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
 				//!< CBV * N
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 
@@ -127,7 +127,7 @@ protected:
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(Heap->GetDesc().Type);
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
 					.BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), 
@@ -161,19 +161,20 @@ protected:
 		{
 			DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			const auto RAH = SwapChain.ResourceAndHandles[i];
+
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(SwapChainBackBuffers[i].Handle, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(RAH.second, DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &HandleDSV[0]);
+				const std::array CHs = { RAH.second };
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, &HandleDSV[0]);
 
 				{
 					const auto& Desc = CbvSrvUavDescs[0];
@@ -190,7 +191,7 @@ protected:
 
 				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(DCL->Close());
 	}

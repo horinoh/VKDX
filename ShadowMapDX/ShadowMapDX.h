@@ -14,7 +14,7 @@ public:
 	virtual ~ShadowMapDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
@@ -26,7 +26,7 @@ protected:
 		Super::CreateCommandList();
 		//!< パス1 : バンドルコマンドリスト
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
@@ -143,7 +143,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 		}
@@ -331,7 +331,7 @@ protected:
 			//!< パス0 + パス1
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 #ifdef USE_SHADOWMAP_VISUALIZE
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount + 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N + SRV
 #else

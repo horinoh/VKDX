@@ -287,7 +287,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用、シャドウレシーバ描画用)
 #pragma region FRAME_OBJECT
-	const auto SCCount = static_cast<uint32_t>(size(SwapchainBackBuffers));
+	const auto SCCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews));
 #pragma endregion
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
@@ -396,7 +396,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 				.pNext = nullptr,
 				.renderPass = RP1,
 				.framebuffer = FB1,
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
 				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {

@@ -190,7 +190,7 @@ public:
 		DirectX::XMStoreFloat4x4(&Tr.InvProjection, InvProjection);
 		DirectX::XMStoreFloat4x4(&Tr.InvView, InvView);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr), &Tr);
 		}
@@ -351,7 +351,7 @@ public:
 		auto& Handle = Desc.second;
 
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 #pragma region SHADER_RECORD
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3 + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0};
 #pragma endregion
@@ -498,6 +498,8 @@ public:
 		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
+		const auto& RAH = SwapChain.ResourceAndHandles[i];
+
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(CL, RT); {
 				const auto& Desc = CbvSrvUavDescs[0];
@@ -505,7 +507,7 @@ public:
 				const auto& Handle = Desc.second;
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 
 				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] SRV(TLAS), [1] SRV(CubeMap)
@@ -520,7 +522,7 @@ public:
 
 				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
-			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainBackBuffers[i].Resource));
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(RAH.first));
 		} VERIFY_SUCCEEDED(CL->Close());
 	}
 	

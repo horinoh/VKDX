@@ -27,7 +27,7 @@ protected:
 #pragma region PASS1
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, BCA, nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
 			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
@@ -219,7 +219,7 @@ protected:
 		//!< レンダーテクスチャ描画用
 		const auto PS = COM_PTR_GET(PipelineStates[1]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		const auto BCL = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
@@ -239,18 +239,20 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		const auto BCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); 
 
 		const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(DCL->Reset(DCA, nullptr));
 		{
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			const auto RT = COM_PTR_GET(RenderTextures.back().Resource);
 
-			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
 #pragma region PASS0
 			//!< メッシュ描画用バンドルコマンドリストを発行
@@ -261,16 +263,16 @@ protected:
 				DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				DCL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(HandleRTV[0], DirectX::Colors::SkyBlue, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #ifdef USE_DEPTH
-				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearDepthStencilView(HandleDSV[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(std::size(Rects)), std::data(Rects));
 #endif
 
 				const std::array RTCHs = { HandleRTV[0] };
 #ifdef USE_DEPTH
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &HandleDSV[0]);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(RTCHs)), std::data(RTCHs), FALSE, &HandleDSV[0]);
 #else			
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(RTCHs)), std::data(RTCHs), FALSE, nullptr);
 #endif
 
 				DCL->ExecuteBundle(BCL0);
@@ -292,11 +294,11 @@ protected:
 
 				DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				const std::array CHs = { RAH.second };
+				DCL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				DCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				DCL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 				//!< SRV
 				DCL->SetGraphicsRootDescriptorTable(0, Handle[0]); 
 

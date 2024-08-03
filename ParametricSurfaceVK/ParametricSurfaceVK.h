@@ -129,8 +129,8 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RP,
 				.framebuffer = FB,
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
-				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
+				.clearValueCount = static_cast<uint32_t>(std::size(CVs)), .pClearValues = std::data(CVs)
 			};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
@@ -139,8 +139,8 @@ protected:
 			} vkCmdEndRenderPass(CB);
 #else
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-				vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-				vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+				vkCmdSetViewport(CB, 0, static_cast<uint32_t>(std::size(Viewports)), std::data(Viewports));
+				vkCmdSetScissor(CB, 0, static_cast<uint32_t>(std::size(ScissorRects)), std::data(ScissorRects));
 
 				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 				vkCmdDrawIndirect(CB, IndirectBuffers[0].Buffer, 0, 1, 0);

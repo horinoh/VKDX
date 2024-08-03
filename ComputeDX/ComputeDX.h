@@ -20,7 +20,7 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
 	}
 	virtual void CreateRootSignature() override {
@@ -102,7 +102,7 @@ protected:
 			const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 			VERIFY_SUCCEEDED(DCL->Reset(DCA, PS)); {
 				PopulateBeginRenderTargetCommand(DCL, RT); {
-				} PopulateEndRenderTargetCommand(DCL, RT, COM_PTR_GET(SwapChainBackBuffers[i].Resource));
+				} PopulateEndRenderTargetCommand(DCL, RT, COM_PTR_GET(SwapChain.ResourceAndHandles[i].first));
 			} VERIFY_SUCCEEDED(DCL->Close());
 		}
 	}

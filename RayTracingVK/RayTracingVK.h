@@ -231,7 +231,7 @@ public:
 		const auto InvProjection = glm::inverse(Projection);
 		const auto InvView = glm::inverse(View);
 		Tr = Transform({ .Projection = Projection, .View = View, .InvProjection = InvProjection, .InvView = InvView });
-		for([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr), &Tr);
 		}
 	}
@@ -328,7 +328,7 @@ public:
 			//!< CombinedImageSampler (CubeMap)
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
 			//!< UniformBuffer * N
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainBackBuffers)) }), 
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews)) }), 
 			
 			//!< StoageBuffer (VB, IB)
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 2 }),
@@ -340,7 +340,7 @@ public:
 			.descriptorPool = DescriptorPools[0],
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
-		for([[maybe_unused]] const auto& i : SwapchainBackBuffers) {
+		for([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 
@@ -351,7 +351,7 @@ public:
 		const auto DII_IB = VkDescriptorBufferInfo({ .buffer = IndexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 		const auto DII_Cube = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
-		for (size_t i = 0; i < size(SwapchainBackBuffers); ++i) {
+		for (size_t i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
 			const auto DII_UB = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			const std::array WDSs = {
 				//!< AS (TLAS)
@@ -524,7 +524,7 @@ public:
 				const auto& SBT = ShaderBindingTables.back();
 				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 
-			} PopulateEndRenderTargetCommand(CB, RT, SwapchainBackBuffers[i].Image, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+			} PopulateEndRenderTargetCommand(CB, RT, Swapchain.ImageAndViews[i].first, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
 

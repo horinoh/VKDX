@@ -15,7 +15,7 @@ public:
 	virtual ~LeapDX() {}
 
 protected:
-	virtual void DrawFrame(const UINT Index) override {
+	virtual void OnUpdate(const UINT Index) override {
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
 #else
@@ -41,7 +41,7 @@ protected:
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tracking));
 		}
@@ -141,7 +141,7 @@ protected:
 		{
 #pragma region CB
 			DXGI_SWAP_CHAIN_DESC1 SCD;
-			SwapChain->GetDesc1(&SCD);
+			SwapChain.DxSwapChain->GetDesc1(&SCD);
 #pragma endregion
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
@@ -169,7 +169,7 @@ protected:
 #pragma endregion
 #pragma region CB
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {.BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); 
@@ -198,36 +198,37 @@ protected:
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-				SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				auto SCCDH = SwapChain.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+				SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChain.DescriptorHeap->GetDesc().Type);
 				const std::array RTCDHs = { SCCDH };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(std::size(RTCDHs)), std::data(RTCDHs), FALSE, nullptr);
 
 				const auto& Desc = CbvSrvUavDescs[0];
 				const auto& Heap = Desc.first;
 				const auto& Handle = Desc.second;
 
 				const std::array DHs = { COM_PTR_GET(Heap) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(std::size(DHs)), std::data(DHs));
 
 				{
 					CL->SetGraphicsRootDescriptorTable(0, Handle[0]);
 #pragma region CB
 					DXGI_SWAP_CHAIN_DESC1 SCD;
-					SwapChain->GetDesc1(&SCD);
+					SwapChain.DxSwapChain->GetDesc1(&SCD);
 					CL->SetGraphicsRootDescriptorTable(1, Handle[i + 2]);
 #pragma endregion
 				}
 
 				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(CL->Close());
 	}

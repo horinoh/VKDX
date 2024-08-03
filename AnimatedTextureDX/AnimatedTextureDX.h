@@ -16,7 +16,7 @@ public:
 protected:
 	static const uint32_t W = 1280, H = 720;
 	std::array<uint32_t, W * H> TexPattern;
-	virtual void DrawFrame(const UINT i) override {
+	virtual void OnUpdate(const UINT i) override {
 		if (0 == i) {
 			std::random_device RndDev;
 			std::ranges::generate(TexPattern, [&]() { return RndDev(); });
@@ -135,11 +135,13 @@ protected:
 			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				const std::array CHs = { RAH.second };
+				CL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 				const auto& DescSRV = CbvSrvUavDescs[0];
 				const auto& HeapSRV = DescSRV.first;

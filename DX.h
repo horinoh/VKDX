@@ -656,13 +656,13 @@ public:
 	void CreateDirectCommandList(const UINT Count);
 	virtual void CreateDirectCommandList() {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		CreateDirectCommandList(SCD.BufferCount);
 	}
 	void CreateBundleCommandList(const UINT Count);
 	virtual void CreateBundleCommandList() {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
+		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		CreateBundleCommandList(SCD.BufferCount);
 	}
 	virtual void CreateComputeCommandList();
@@ -767,12 +767,14 @@ public:
 	virtual void PopulateBundleCommandList([[maybe_unused]] const size_t i) {}
 	virtual void PopulateCommandList([[maybe_unused]] const size_t i) {}
 
-	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
-	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
+	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain.DxSwapChain->GetCurrentBackBufferIndex(); }
+	
+	virtual void OnUpdate([[maybe_unused]] const UINT i) {}
 	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
 	virtual void SubmitGraphics(const UINT i);
 	virtual void SubmitCompute(const UINT i);
 	virtual void Present();
+
 	virtual void Draw();
 	virtual void Dispatch();
 	
@@ -800,14 +802,14 @@ protected:
 	COM_PTR<ID3D12Fence> GraphicsFence;
 	COM_PTR<ID3D12Fence> ComputeFence;
 
-	COM_PTR<IDXGISwapChain4> SwapChain;
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
-	struct SwapChainBackBuffer 
-	{
-		COM_PTR<ID3D12Resource> Resource;
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle;
-	}; 
-	std::vector<SwapChainBackBuffer> SwapChainBackBuffers;
+	//!< [VK] <VkImage, VkImageView> 相当
+	using ResourceAndHandle = std::pair<COM_PTR<ID3D12Resource>, D3D12_CPU_DESCRIPTOR_HANDLE>;
+	struct SwapChain {
+		COM_PTR<IDXGISwapChain4> DxSwapChain;
+		COM_PTR<ID3D12DescriptorHeap> DescriptorHeap;
+		std::vector<ResourceAndHandle> ResourceAndHandles;
+	};
+	SwapChain SwapChain;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> DirectCommandAllocators;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> DirectCommandLists;
@@ -835,9 +837,11 @@ protected:
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
 
-	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>> CbvSrvUavDescs;
-	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> RtvDescs;
-	std::vector<std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>> DsvDescs;
+	using HeapAndGHandles = std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>>;
+	using HeapAndCHandles = std::pair<COM_PTR<ID3D12DescriptorHeap>, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>>;
+	std::vector<HeapAndGHandles> CbvSrvUavDescs;
+	std::vector<HeapAndCHandles> RtvDescs;
+	std::vector<HeapAndCHandles> DsvDescs;
 
 	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
 

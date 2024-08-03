@@ -72,14 +72,16 @@ protected:
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(std::size(Viewports)), std::data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(std::size(ScissorRects)), std::data(ScissorRects));
 
-			const auto SCR = COM_PTR_GET(SwapChainBackBuffers[i].Resource);
+			const auto& RAH = SwapChain.ResourceAndHandles[i];
+
+			const auto SCR = COM_PTR_GET(RAH.first);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				const std::array CHs = { SwapChainBackBuffers[i].Handle };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				const std::array CHs = { RAH.second };
+				CL->OMSetRenderTargets(static_cast<UINT>(std::size(CHs)), std::data(CHs), FALSE, nullptr);
 
 				CL->ExecuteBundle(BCL);
 			}

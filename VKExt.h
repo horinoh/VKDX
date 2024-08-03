@@ -30,14 +30,20 @@ protected:
 	void CreateTexture_Depth(const uint32_t Width, const uint32_t Height) {
 		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
+	void CreateTexture_Depth(const VkExtent2D& Ext) {
+		CreateTexture_Depth(Ext.width, Ext.height);
+	}
 	void CreateTexture_Depth() {
-		CreateTexture_Depth(SurfaceExtent2D.width, SurfaceExtent2D.height);
+		CreateTexture_Depth(Swapchain.Extent);
 	}
 	void CreateTexture_Render(const uint32_t Width, const uint32_t Height) {
 		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), SurfaceFormat.format, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
+	void CreateTexture_Render(const VkExtent2D& Ext) {
+		CreateTexture_Render(Ext.width, Ext.height);
+	}
 	void CreateTexture_Render() {
-		CreateTexture_Render(SurfaceExtent2D.width, SurfaceExtent2D.height);
+		CreateTexture_Render(Swapchain.Extent.width, Swapchain.Extent.height);
 	}
 
 	void CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, const VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -64,13 +70,13 @@ protected:
 	void CreatePipeline_MsFs(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(PL, PLL, RP, DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
 
 	void CreateFrameBuffer_Default() {
-		for (const auto& i : SwapchainBackBuffers) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView });
+		for (const auto& i : Swapchain.ImageAndViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], Swapchain.Extent, 1, { i.second });
 		}
 	}
 	void CreateFrameBuffer_Depth() {
-		for (const auto& i : SwapchainBackBuffers) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i.ImageView, DepthTextures[0].View});
+		for (const auto& i : Swapchain.ImageAndViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], Swapchain.Extent, 1, { i.second, DepthTextures[0].View});
 		}
 	}
 
@@ -124,7 +130,7 @@ protected:
 				.pNext = nullptr,
 				.renderPass = RenderPasses[0],
 				.framebuffer = Framebuffers[i],
-				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = Swapchain.Extent }),
 				.clearValueCount = static_cast<uint32_t>(std::size(CVs)), .pClearValues = std::data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {

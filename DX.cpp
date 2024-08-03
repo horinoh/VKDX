@@ -135,9 +135,9 @@ void DX::OnPreDestroy()
 
 	//!< フルスクリーンの場合は解除
 	DXGI_SWAP_CHAIN_DESC1 SCD1;
-	SwapChain->GetDesc1(&SCD1);
+	SwapChain.DxSwapChain->GetDesc1(&SCD1);
 	if (SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
-		VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(FALSE, nullptr));
+		VERIFY_SUCCEEDED(SwapChain.DxSwapChain->SetFullscreenState(FALSE, nullptr));
 	}
 
 	//!< GPUが完了するまでここで待機 (Wait GPU)
@@ -646,10 +646,10 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	});
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
-	COM_PTR_RESET(SwapChain);
+	COM_PTR_RESET(SwapChain.DxSwapChain);
 	COM_PTR<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
-	COM_PTR_AS(NewSwapChain, SwapChain);
+	COM_PTR_AS(NewSwapChain, SwapChain.DxSwapChain);
 #endif
 
 #ifdef USE_HDR
@@ -706,21 +706,22 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	});
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChain.DescriptorHeap)));
 
 	LOG_OK();
 }
 void DX::GetSwapChainResource()
 {
 	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
+	SwapChain.DxSwapChain->GetDesc1(&SCD);
 
-	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+	auto CDH = SwapChain.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChain.DescriptorHeap->GetDesc().Type);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		auto& SCBB = SwapChainBackBuffers.emplace_back();
-		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SCBB.Resource)));
+		auto& RAH = SwapChain.ResourceAndHandles.emplace_back();
+
+		//!< スワップチェインのバッファリソースを取得
+		VERIFY_SUCCEEDED(SwapChain.DxSwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(RAH.first)));
 
 		//!< デスクリプタ(ビュー)の作成
 #ifdef USE_GAMMA_CORRECTION
@@ -729,12 +730,12 @@ void DX::GetSwapChainResource()
 			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
 			.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
 		};
-		Device->CreateRenderTargetView(COM_PTR_GET(SCBB.Resource), &RTVD, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(RAH.first), &RTVD, CDH);
 #else
 		//!< タイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能
-		Device->CreateRenderTargetView(COM_PTR_GET(SCBB.Resource), nullptr, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(RAH.first), nullptr, CDH);
 #endif
-		SCBB.Handle = CDH;
+		RAH.second = CDH;
 		CDH.ptr += IncSize;
 	}
 
@@ -750,12 +751,14 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
-	for (auto& i : SwapChainBackBuffers) { COM_PTR_RESET(i.Resource); }
-	SwapChainBackBuffers.clear();
+	for (auto& i : SwapChain.ResourceAndHandles) { 
+		COM_PTR_RESET(i.first); 
+	}
+	SwapChain.ResourceAndHandles.clear();
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
-	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SCD.BufferCount, Width, Height, SCD.Format, SCD.Flags));
+	SwapChain.DxSwapChain->GetDesc1(&SCD);
+	VERIFY_SUCCEEDED(SwapChain.DxSwapChain->ResizeBuffers(SCD.BufferCount, Width, Height, SCD.Format, SCD.Flags));
 	Log("\tResizeBuffers\n");
 
 	//!< リソースを取得、ビューを作成 (Get resource, create view)
@@ -811,7 +814,7 @@ void DX::CreateComputeCommandList()
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_UUIDOF_PUTVOID(ComputeCommandAllocators.emplace_back())));
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
+	SwapChain.DxSwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_GET(ComputeCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(ComputeCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(ComputeCommandLists.back()->Close());
@@ -1455,14 +1458,14 @@ void DX::SubmitCompute(const UINT i)
 }
 void DX::Present()
 {
-	VERIFY_SUCCEEDED(SwapChain->Present(1/*垂直同期を待つ*/, 0));
+	VERIFY_SUCCEEDED(SwapChain.DxSwapChain->Present(1/*垂直同期を待つ*/, 0));
 }
 void DX::Draw()
 {
 	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
 	//!< コンスタントバッファの更新等
-	DrawFrame(GetCurrentBackBufferIndex());
+	OnUpdate(GetCurrentBackBufferIndex());
 
 	SubmitGraphics(GetCurrentBackBufferIndex());
 	
@@ -1470,10 +1473,8 @@ void DX::Draw()
 }
 void DX::Dispatch()
 {
-	//!< WaitForFence
 	WaitForFence(COM_PTR_GET(ComputeCommandQueue), COM_PTR_GET(ComputeFence));
 
-	//!< Submit
 	SubmitCompute(0);
 }
 
