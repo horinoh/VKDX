@@ -36,15 +36,14 @@ protected:
 #endif
 #endif
 			//!< VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP ‚Í‚æ‚­Žg‚¤‚Ì‚Åƒƒ“ƒo‚Æ‚µ‚ÄŠo‚¦‚Ä‚¨‚­
-			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+			VkPhysicalDeviceProperties2 PDP2 = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+				.pNext = &PDRTPP
+			};
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-			VkPhysicalDeviceSynchronization2Features PDS2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES, .pNext = nullptr, .synchronization2 = VK_TRUE };
-			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = &PDS2, .bufferDeviceAddress = VK_TRUE };
-			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF, .rayTracingPipeline = VK_TRUE, .rayTracingPipelineTraceRaysIndirect = VK_TRUE };
-			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF, .accelerationStructure = VK_TRUE };
-			VkPhysicalDeviceDescriptorIndexingFeatures PDDIF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, .pNext = &PDASF, .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE, .shaderSampledImageArrayNonUniformIndexing = VK_TRUE, .runtimeDescriptorArray = VK_TRUE };
-			Super::CreateDevice(hWnd, hInstance, &PDDIF, {
+			RTFeature RTF;
+			Super::CreateDevice(hWnd, hInstance, RTF.GetPtr(), {
 				VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 				VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 				VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
@@ -125,12 +124,10 @@ protected:
 	}
 
 	[[nodiscard]] static bool HasRayTracingSupport(const VkPhysicalDevice PD) {
-		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
-		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
-		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
-		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+		RTFeature RTF;
+		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = RTF.GetPtr()};
 		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
-		return PDBDAF.bufferDeviceAddress && PDRTPF.rayTracingPipeline && PDASF.accelerationStructure;
+		return RTF.PDBDAF.bufferDeviceAddress && RTF.PDRTPF.rayTracingPipeline && RTF.PDASF.accelerationStructure;
 	}
 
 #pragma region RAYTRACING
@@ -387,6 +384,38 @@ protected:
 		}
 	};
 #pragma endregion
+
+	struct RTFeature {
+		void* GetPtr() { return &PDDIF; }
+		VkPhysicalDeviceSynchronization2Features PDS2 = { 
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+			.pNext = nullptr,
+			.synchronization2 = VK_TRUE
+		};
+		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { 
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, 
+			.pNext = &PDS2,
+			.bufferDeviceAddress = VK_TRUE 
+		};
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, 
+			.pNext = &PDBDAF, 
+			.rayTracingPipeline = VK_TRUE, 
+			.rayTracingPipelineTraceRaysIndirect = VK_TRUE
+		};
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { 
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, 
+			.pNext = &PDRTPF, 
+			.accelerationStructure = VK_TRUE 
+		};
+		VkPhysicalDeviceDescriptorIndexingFeatures PDDIF = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, 
+			.pNext = &PDASF, 
+			.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE, 
+			.shaderSampledImageArrayNonUniformIndexing = VK_TRUE, 
+			.runtimeDescriptorArray = VK_TRUE 
+		};
+	};
 
 	std::vector<BLAS> BLASs;
 	std::vector<TLAS> TLASs;

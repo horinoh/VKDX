@@ -1360,24 +1360,19 @@ public:
 	};
 #endif
 
-protected:
-	std::vector<std::thread> Threads;
-
-	VkInstance Instance = VK_NULL_HANDLE;
-#ifdef USE_DEBUG_UTILS
-	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
-#endif
-	VkSurfaceKHR Surface = VK_NULL_HANDLE;
-	
-	std::vector<VkPhysicalDevice> PhysicalDevices;
-	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
-
 	struct VulkanFeature {
 		void* GetPtr() { return &PDV13F; }
+		VkPhysicalDeviceNestedCommandBufferFeaturesEXT PDNCBF = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NESTED_COMMAND_BUFFER_FEATURES_EXT,
+			.pNext = nullptr,
+			.nestedCommandBuffer = VK_TRUE,
+			.nestedCommandBufferRendering = VK_TRUE,
+			.nestedCommandBufferSimultaneousUse = VK_TRUE
+		};
+
 		VkPhysicalDeviceVulkan11Features PDV11F = {
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-			.pNext = nullptr,
+			.pNext = &PDNCBF,
 			.storageBuffer16BitAccess = VK_FALSE,
 			.uniformAndStorageBuffer16BitAccess = VK_FALSE,
 			.storagePushConstant16 = VK_FALSE,
@@ -1440,7 +1435,7 @@ protected:
 			.vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE,
 			.shaderOutputViewportIndex = VK_FALSE,
 			.shaderOutputLayer = VK_FALSE,
-			.subgroupBroadcastDynamicId = VK_FALSE, 
+			.subgroupBroadcastDynamicId = VK_FALSE,
 		};
 		VkPhysicalDeviceVulkan13Features PDV13F = {
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -1459,9 +1454,23 @@ protected:
 			.shaderZeroInitializeWorkgroupMemory = VK_FALSE,
 			.dynamicRendering = VK_TRUE,
 			.shaderIntegerDotProduct = VK_FALSE,
-			.maintenance4 = VK_TRUE, 
+			.maintenance4 = VK_TRUE,
 		};
 	};
+
+protected:
+	std::vector<std::thread> Threads;
+
+	VkInstance Instance = VK_NULL_HANDLE;
+#ifdef USE_DEBUG_UTILS
+	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
+#endif
+	VkSurfaceKHR Surface = VK_NULL_HANDLE;
+	
+	std::vector<VkPhysicalDevice> PhysicalDevices;
+	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
+
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
