@@ -1,7 +1,6 @@
 #pragma region RAYTRACING
 VK_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
 VK_PROC_ADDR(GetAccelerationStructureDeviceAddressKHR)
-VK_PROC_ADDR(GetBufferDeviceAddressKHR)
 VK_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
 
 VK_PROC_ADDR(CreateAccelerationStructureKHR)

@@ -83,6 +83,8 @@
 #include "Win.h"
 #endif
 
+#include "VKFeature.h"
+
 namespace Colors
 {
 	constexpr VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -907,7 +909,11 @@ protected:
 	virtual void CreateInstance(const std::vector<const char*>& AdditionalLayers = {}, const std::vector<const char*>& AdditionalExtensions = {});
 
 	virtual void SelectPhysicalDevice(VkInstance Instance);
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
+	void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::vector<const char*>& ExtensionNames);
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance) {
+		VKFeature VKF;
+		CreateDevice(hWnd, hInstance, VKF.GetPtr(), VKF.ExtNames);
+	}
 
 	virtual void CreateFence(VkDevice Dev) {
 		//!< ホストとデバイスの同期 (Synchronization between host and device)
@@ -1427,7 +1433,7 @@ public:
 			.separateDepthStencilLayouts = VK_FALSE,
 			.hostQueryReset = VK_FALSE,
 			.timelineSemaphore = VK_TRUE,
-			.bufferDeviceAddress = VK_FALSE,
+			.bufferDeviceAddress = VK_TRUE,
 			.bufferDeviceAddressCaptureReplay = VK_FALSE,
 			.bufferDeviceAddressMultiDevice = VK_FALSE,
 			.vulkanMemoryModel = VK_FALSE,
