@@ -62,7 +62,7 @@ public:
 		//Load(FBX_PATH / "Sphere.FBX");
 
 		const auto& CB = CommandBuffers[0];
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);

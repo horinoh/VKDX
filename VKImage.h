@@ -63,7 +63,7 @@ public:
 		gli::texture GliTexture;
 
 	public:
-		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const std::filesystem::path& Path) {
+		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
 			//!< 対応フォーマット DDS, KTX
 			if (IsDDS(Path) || IsKTX(Path)) {
@@ -93,7 +93,7 @@ public:
 			}
 			return *this;
 		}
-		void CopyToStagingBuffer(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, StagingBuffer& Staging) {
+		void CopyToStagingBuffer(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, StagingBuffer& Staging) {
 			Staging.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), GliTexture.data());
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
@@ -118,7 +118,7 @@ public:
 			}
 			VK::PopulateCopyBufferToImageCommand(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, Levels, Layers);
 		}
-		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
+		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
 			VK::Scoped<StagingBuffer> Staging(Dev);
 			CopyToStagingBuffer(Dev, PDMP, Staging);
 

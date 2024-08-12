@@ -28,7 +28,7 @@ protected:
 #endif
 
 	void CreateTexture_Depth(const uint32_t Width, const uint32_t Height) {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
+		DepthTextures.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, DepthFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
 	void CreateTexture_Depth(const VkExtent2D& Ext) {
 		CreateTexture_Depth(Ext.width, Ext.height);
@@ -37,7 +37,7 @@ protected:
 		CreateTexture_Depth(Swapchain.Extent);
 	}
 	void CreateTexture_Render(const uint32_t Width, const uint32_t Height) {
-		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), SurfaceFormat.format, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
+		RenderTextures.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, SurfaceFormat.format, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
 	void CreateTexture_Render(const VkExtent2D& Ext) {
 		CreateTexture_Render(Ext.width, Ext.height);

@@ -21,7 +21,7 @@ protected:
 	virtual void AllocateSecondaryCommandBuffer() override {}
 #endif
 	virtual void CreateGeometry() override { 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		//!< 最低でもインデックス数1が必要 (At least index count must be 1)
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);

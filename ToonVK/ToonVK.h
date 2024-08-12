@@ -35,7 +35,7 @@ protected:
 	}
 
 	virtual void CreateGeometry() override { 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
 	}
@@ -50,7 +50,7 @@ protected:
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
 		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tr));
 		}
 #pragma endregion
 	}

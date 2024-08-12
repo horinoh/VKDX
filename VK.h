@@ -137,7 +137,7 @@ public:
 		using Super = DeviceMemoryBase;
 	public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
-		BufferMemory& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags BUF, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) {
+		BufferMemory& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkBufferUsageFlags BUF, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, BUF, MPF, Source);
 			return *this;
 		}
@@ -151,7 +151,7 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		DeviceLocalBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags BUF) {
+		DeviceLocalBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkBufferUsageFlags BUF) {
 			Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			return *this;
 		}
@@ -169,7 +169,7 @@ public:
 				Buffer,
 				VK_ACCESS_MEMORY_WRITE_BIT, AF);
 		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
 			VK::Scoped<StagingBuffer> Staging(Device);
 			Staging.Create(Device, PDMP, Size, Source);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -184,7 +184,7 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		HostVisibleBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags BUF, const void* Source = nullptr) {
+		HostVisibleBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkBufferUsageFlags BUF, const void* Source = nullptr) {
 			Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/, Source);
 			return *this;
 		}
@@ -194,7 +194,7 @@ public:
 	private:
 		using Super = HostVisibleBuffer;
 	public:
-		StagingBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+		StagingBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const void* Source = nullptr) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Source);
 			return *this;
 		}
@@ -204,14 +204,14 @@ public:
 	private:
 		using Super = DeviceLocalBuffer;
 	public:
-		VertexBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+		VertexBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
 			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
 	};
@@ -220,14 +220,14 @@ public:
 	private:
 		using Super = DeviceLocalBuffer;
 	public:
-		IndexBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+		IndexBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
 			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
 	};
@@ -236,20 +236,20 @@ public:
 	private:
 		using Super = DeviceLocalBuffer;
 	protected:
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
 	public:
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndexedIndirectCommand& DIIC) { return Create(Device, PDMP, sizeof(DIIC)); }
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDispatchIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkDrawIndexedIndirectCommand& DIIC) { return Create(Device, PDMP, sizeof(DIIC)); }
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkDrawIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkDispatchIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
 #pragma region MESH_SHADER
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawMeshTasksIndirectCommandNV& DMTIC) { return Create(Device, PDMP, sizeof(DMTIC)); }
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawMeshTasksIndirectCommandEXT& DMTIC) { return Create(Device, PDMP, sizeof(DMTIC)); }
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkDrawMeshTasksIndirectCommandNV& DMTIC) { return Create(Device, PDMP, sizeof(DMTIC)); }
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkDrawMeshTasksIndirectCommandEXT& DMTIC) { return Create(Device, PDMP, sizeof(DMTIC)); }
 #pragma endregion
 #pragma region RAYTRACING
-		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkTraceRaysIndirectCommandKHR& TRIC) {
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkTraceRaysIndirectCommandKHR& TRIC) {
 			Super::Create(Device, PDMP, sizeof(TRIC), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 			return *this;
 		}
@@ -257,7 +257,7 @@ public:
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
 			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 		}
 	};
@@ -266,7 +266,7 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		UniformBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+		UniformBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const void* Source = nullptr) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Source);
 			return *this;
 		}
@@ -278,11 +278,11 @@ public:
 		using Super = DeviceLocalBuffer;
 	public:
 		VkBufferView View = VK_NULL_HANDLE;
-		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
-		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format) {
+		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkFormat Format) {
 			Create(Device, PDMP, Size);
 			const VkBufferViewCreateInfo BVCI = {
 				.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
@@ -306,7 +306,7 @@ public:
 	//private:
 	//	using Super = HostVisibleBuffer;
 	//public:
-	//	HostVisibleStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+	//	HostVisibleStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const void* Source = nullptr) {
 	//		Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Source);
 	//		return *this;
 	//	}
@@ -318,11 +318,11 @@ public:
 		using Super = DeviceLocalBuffer;
 	public:
 		VkBufferView View = VK_NULL_HANDLE;
-		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | AdditionalUsage);
 			return *this;
 		}
-		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkFormat Format, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
 			Create(Device, PDMP, Size, AdditionalUsage);
 			const VkBufferViewCreateInfo BVCI = {
 				.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
@@ -346,7 +346,7 @@ public:
 	//private:
 	//	using Super = HostVisibleBuffer;
 	//public:
-	//	HostVisibleUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+	//	HostVisibleUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const void* Source = nullptr) {
 	//		Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Source);
 	//		return *this;
 	//	}
@@ -359,7 +359,7 @@ public:
 	public:
 		VkImage Image = VK_NULL_HANDLE;
 		VkImageView View = VK_NULL_HANDLE;
-		Texture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const uint32_t MipLevels = 1, const uint32_t ArrayLayers = 1, const VkImageUsageFlags Usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, const VkImageAspectFlags IAF = VK_IMAGE_ASPECT_COLOR_BIT) {
+		Texture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkFormat Format, const VkExtent3D& Extent, const uint32_t MipLevels = 1, const uint32_t ArrayLayers = 1, const VkImageUsageFlags Usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, const VkImageAspectFlags IAF = VK_IMAGE_ASPECT_COLOR_BIT) {
 			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, 0, VK_IMAGE_TYPE_2D, Format, Extent, MipLevels, ArrayLayers, Usage);
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -403,7 +403,7 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		DepthTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+		DepthTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkFormat Format, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT/*| VK_IMAGE_USAGE_SAMPLED_BIT*/, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 			return *this;
 		}
@@ -413,7 +413,7 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		RenderTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+		RenderTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkFormat Format, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			return *this;
 		}
@@ -423,7 +423,7 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkFormat Format, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent, 1, 1,
 				VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				//VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -436,7 +436,7 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		AnimatedTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Bpp, const VkExtent3D& Extent) {
+		AnimatedTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkFormat Format, const uint32_t Bpp, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent);
 
 			//!< ステージングバッファを作る
@@ -460,7 +460,7 @@ public:
 	};
 
 	void UpdateTexture(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags PSF) {
-		const auto PDMP = CurrentPhysicalDeviceMemoryProperties;
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
 		VK::Scoped<BufferMemory> StagingBuffer(Device);
@@ -479,7 +479,7 @@ public:
 	}
 	void UpdateTexture2(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags PSF,
 		Texture& Tex1, const uint32_t Width1, const uint32_t Height1, const uint32_t Bpp1, const void* Data1, const VkPipelineStageFlags PSF1) {
-		const auto PDMP = CurrentPhysicalDeviceMemoryProperties;
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
 		VK::Scoped<BufferMemory> StagingBuffer(Device);
@@ -1049,7 +1049,7 @@ protected:
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
 	virtual void GetSwapchainImages();
 	virtual void CreateSwapchain() {
-		CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); 
+		CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight()); 
 		GetSwapchainImages();
 	}
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
@@ -1061,11 +1061,11 @@ protected:
 
 	virtual void LoadScene() {}
 
-	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags BUF, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
-	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
+	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const size_t Size, const VkBufferUsageFlags BUF, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
+	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
 
 	//static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory,
-	//	const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size,
+	//	const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkBufferUsageFlags BUF, const size_t Size,
 	//	const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
 
 	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkBuffer Buffer) {
@@ -1315,9 +1315,6 @@ protected:
 	[[nodiscard]] static const VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
 #pragma endregion
 
-	[[nodiscard]] virtual VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
-	[[nodiscard]] virtual VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
-
 #define VK_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #ifdef VK_NO_PROTOYYPES
 protected:
@@ -1474,8 +1471,13 @@ protected:
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	
 	std::vector<VkPhysicalDevice> PhysicalDevices;
-	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
+	struct PhysDevProp
+	{
+		VkPhysicalDeviceProperties PDP;
+		VkPhysicalDeviceMemoryProperties PDMP;
+	};
+	using PhysicalDeviceAndProps = std::pair<VkPhysicalDevice, PhysDevProp>;
+	PhysicalDeviceAndProps SelectedPhysDevice;
 
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;

@@ -15,16 +15,16 @@ public:
 	virtual ~MeshletVK() {}
 
 	void CreateGeometry() override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			const auto& CB = CommandBuffers[0];
-			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			const auto& PDMP = SelectedPhysDevice.second.PDMP;
 			//!< ƒg[ƒ‰ƒX16ŒÂ (16 of torus)
 			constexpr VkDrawMeshTasksIndirectCommandEXT DMTIC = { .groupCountX = 16, .groupCountY = 1, .groupCountZ = 1 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}
 	}
 	virtual void CreatePipeline() override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			Pipelines.emplace_back();
 
 			const std::array SMs = {
@@ -69,7 +69,7 @@ public:
 				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-				if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+				if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 					vkCmdDrawMeshTasksIndirectEXT(CB, IndirectBuffers[0].Buffer, 0, 1, 0);
 				}
 			} vkCmdEndRenderPass(CB);

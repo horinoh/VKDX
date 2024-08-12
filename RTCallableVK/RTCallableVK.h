@@ -14,9 +14,9 @@ public:
 	virtual ~RTCallableVK() {}
 
 	virtual void CreateGeometry() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
@@ -185,7 +185,7 @@ public:
 		SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreatePipeline() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
 
@@ -255,7 +255,7 @@ public:
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateShaderBindingTable() override {
-		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		auto& SBT = ShaderBindingTables.emplace_back(); {
 			//!< 各グループのハンドルの個数 (Genは1固定)
 			const auto MissCount = 1;
@@ -344,7 +344,7 @@ public:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 
 		const auto CB = CommandBuffers[i];
 		const auto RT = StorageTextures[0].Image;

@@ -37,13 +37,13 @@ protected:
 		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);			//!< VK		: VK_LAYER_RENDERDOC_Capture を使用しない
 	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance) override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			//!< VkPhysicalDeviceMeshShaderPropertiesEXT PDMSP はよく使うのでメンバとして覚えておく
 			VkPhysicalDeviceProperties2 PDP2 = { 
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, 
 				.pNext = &PDMSP
 			};
-			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
+			vkGetPhysicalDeviceProperties2(SelectedPhysDevice.first, &PDP2);
 
 			MSFeature MSF;
 			Super::CreateDevice(hWnd, hInstance, MSF.GetPtr(), MSF.ExtNames);
@@ -72,13 +72,13 @@ protected:
 		Super::CreateInstance(AdditionalLayers, AdditionalExtensions);
 	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance) override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			//!< VkPhysicalDeviceMeshShaderPropertiesEXT PDMSP はよく使うのでメンバとして覚えておく
 			VkPhysicalDeviceProperties2 PDP2 = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
 				.pNext = &PDMSP
 			};
-			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
+			vkGetPhysicalDeviceProperties2(SelectedPhysDevice.first, &PDP2);
 
 			MSFeature MSF;
 			Super::CreateDevice(hWnd, hInstance, MSF.GetPtr(), MSF.ExtNames);

@@ -55,12 +55,12 @@ public:
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 
 		//Load(FBX_PATH / "bunny.FBX");
 		Load(FBX_PATH / "dragon.FBX");
 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
@@ -232,13 +232,13 @@ public:
 		const auto InvView = glm::inverse(View);
 		Tr = Transform({ .Projection = Projection, .View = View, .InvProjection = InvProjection, .InvView = InvView });
 		for([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr), &Tr);
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tr), &Tr);
 		}
 	}
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds")
 			.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
@@ -247,7 +247,7 @@ public:
 		CreateImmutableSampler_LR();
 	}
 	virtual void CreatePipelineLayout() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 		const std::array ISs = { Samplers[0] };
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			//!< AS (TLAS)
@@ -268,7 +268,7 @@ public:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
 		const std::array SMs = {
@@ -415,7 +415,7 @@ public:
 		}
 	}
 	virtual void CreateShaderBindingTable() override {
-		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		auto& SBT = ShaderBindingTables.emplace_back(); {
 			//!< 各グループのハンドルの個数 (Genは1固定)
 			const auto MissCount = 1;
@@ -501,7 +501,7 @@ public:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }
 
 		const auto CB = CommandBuffers[i];
 		const auto RT = StorageTextures[0].Image;

@@ -16,9 +16,9 @@ public:
 
 #ifdef USE_INDIRECT
 	void CreateGeometry() override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			const auto& CB = CommandBuffers[0];
-			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			const auto& PDMP = SelectedPhysDevice.second.PDMP;
 #ifdef USE_NV_MESH_SHADER
 			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
 #else
@@ -29,7 +29,7 @@ public:
 	}
 #endif
 	virtual void CreatePipeline() override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			Pipelines.emplace_back();
 
 			const std::array SMs = {
@@ -80,7 +80,7 @@ public:
 				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-				if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+				if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 #ifdef USE_INDIRECT
 #ifdef USE_NV_MESH_SHADER
 					vkCmdDrawMeshTasksIndirectNV(CB, IndirectBuffers[0].Buffer, 0, 1, 0);

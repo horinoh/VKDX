@@ -44,7 +44,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
 #pragma region PASS0 (Draw mesh)
@@ -89,12 +89,12 @@ protected:
 
 #pragma region FRAME_OBJECT
 		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tr));
 		}
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto Extent = VkExtent3D({ .width = Swapchain.Extent.width, .height = Swapchain.Extent.height, .depth = 1 });
 		//!< ƒJƒ‰[(Color)
 		RenderTextures.emplace_back().Create(Device, PDMP, SurfaceFormat.format, Extent);

@@ -36,14 +36,14 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
 		for([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tracking));
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tracking));
 		}
 	}
 #pragma endregion

@@ -76,9 +76,9 @@ public:
 	}
 
 	void CreateGeometry() override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			const auto& CB = CommandBuffers[0];
-			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			const auto& PDMP = SelectedPhysDevice.second.PDMP;
 
 			//Load(FBX_PATH / "dragon.FBX");
 			//Load(FBX_PATH / "bunny4.FBX");
@@ -118,7 +118,7 @@ public:
 			//!< テクセルバッファ系はフォーマットがサポートされるかチェックする (UNIFORM_TEXEL_BUFFER が R32G32B32A32_SFLOAT をサポートするか)
 #ifdef _DEBUG
 			VkFormatProperties FP;
-			const auto PD = GetCurrentPhysicalDevice();
+			const auto PD = SelectedPhysDevice.first;
 			vkGetPhysicalDeviceFormatProperties(PD, VK_FORMAT_R32G32B32A32_SFLOAT, &FP); 
 			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
 			vkGetPhysicalDeviceFormatProperties(PD, VK_FORMAT_R32_UINT, &FP);
@@ -129,7 +129,7 @@ public:
 			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices8), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices8), data(VertexIndices8), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT);
 
-			VkPhysicalDeviceProperties PDP = {}; vkGetPhysicalDeviceProperties(GetCurrentPhysicalDevice(), &PDP);
+			VkPhysicalDeviceProperties PDP = {}; vkGetPhysicalDeviceProperties(SelectedPhysDevice.first, &PDP);
 			assert(TotalSizeOf(Meshlets) == Cmn::RoundUp(TotalSizeOf(Meshlets), PDP.limits.minStorageBufferOffsetAlignment));
 			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT); 
@@ -154,7 +154,7 @@ public:
 	virtual void CreatePipeline() override {
 		Pipelines.emplace_back();
 
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 			const std::array SMs = {
 				VK::CreateShaderModule(GetFilePath(".task.spv")),
 				VK::CreateShaderModule(GetFilePath(".mesh.spv")),
@@ -254,7 +254,7 @@ public:
 				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-				if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+				if (HasMeshShaderSupport(SelectedPhysDevice.first)) {
 					vkCmdDrawMeshTasksIndirectEXT(CB, IndirectBuffers[0].Buffer, 0, 1, 0);
 				}
 			} vkCmdEndRenderPass(CB);

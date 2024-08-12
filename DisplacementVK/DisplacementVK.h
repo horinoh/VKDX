@@ -26,7 +26,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 1, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
@@ -41,12 +41,12 @@ protected:
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
 		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tr));
 		}
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
 		//!< [0] ディスプレースメント(Displacement)

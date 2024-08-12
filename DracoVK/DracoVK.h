@@ -60,7 +60,7 @@ public:
 		//Load(DRC_SAMPLE_PATH / "bunny_gltf.drc");
 		
 		const auto& CB = CommandBuffers[0];
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);

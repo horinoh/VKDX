@@ -15,7 +15,7 @@ public:
 
 protected:
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto& CB = CommandBuffers[0];
 
 		const std::array Vertices = {

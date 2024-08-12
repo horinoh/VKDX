@@ -14,15 +14,15 @@ public:
 	virtual ~ComputeVK() {}
 
 protected:
-	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
+	virtual void CreateSwapchain() override { VK::CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override { 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
 		//!< スワップチェインと同じカラーフォーマットにしておく、(レイアウトは変更したり戻したりするので、戻せるレイアウト(ここでは TRANSFER_SRC_OPTIMAL)にしておく)
-		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), SurfaceFormat.format, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
+		StorageTextures.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, SurfaceFormat.format, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
 			.SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	}
 	virtual void CreatePipelineLayout() override {

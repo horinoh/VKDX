@@ -33,16 +33,14 @@ protected:
 	}
 
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-
 		//!< アニメーションテクスチャで作成する (Create as animated texture)
 		constexpr auto Bpp = 4;
-		AnimatedTextures.emplace_back().Create(Device, CurrentPhysicalDeviceMemoryProperties, VK_FORMAT_R8G8B8A8_UNORM, Bpp, VkExtent3D({ .width = W, .height = H, .depth = 1 }));
+		AnimatedTextures.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, VK_FORMAT_R8G8B8A8_UNORM, Bpp, VkExtent3D({ .width = W, .height = H, .depth = 1 }));
 	}
 	virtual void CreateImmutableSampler() override {
 		CreateImmutableSampler_LR();

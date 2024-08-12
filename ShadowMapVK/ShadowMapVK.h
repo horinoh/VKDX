@@ -41,7 +41,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
 #pragma region PASS0
@@ -151,7 +151,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		for ([[maybe_unused]] const auto& i : Swapchain.ImageAndViews) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
+			UniformBuffers.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, sizeof(Tr));
 		}
 #pragma endregion
 	}
@@ -303,7 +303,7 @@ protected:
 #ifdef _DEBUG
 		//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
 		VkPhysicalDeviceFeatures PDF;
-		vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
+		vkGetPhysicalDeviceFeatures(SelectedPhysDevice.first, &PDF);
 		assert((!PRSCI_0.depthClampEnable || PDF.depthClamp) && "");
 #endif
 		const VkStencilOpState SOS_Front = { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 };
