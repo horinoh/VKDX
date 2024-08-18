@@ -442,7 +442,8 @@ protected:
 #pragma region FRAME_OBJECT
 		const auto SCCount = std::size(Swapchain.ImageAndViews);
 		//!< パス0 :
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), VK_PIPELINE_BIND_POINT_GRAPHICS, {
+		VkDescriptorUpdateTemplate DUT0;
+		VK::CreateDescriptorUpdateTemplate(DUT0, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo_0::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -453,11 +454,13 @@ protected:
 			const DescriptorUpdateInfo_0 DUI = {
 				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates.back(), &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT0, &DUI);
+			vkDestroyDescriptorUpdateTemplate(Device, DUT0, GetAllocationCallbacks());
 		}
 
 		//!< パス1 :
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), VK_PIPELINE_BIND_POINT_GRAPHICS, {
+		VkDescriptorUpdateTemplate DUT1;
+		VK::CreateDescriptorUpdateTemplate(DUT1, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -476,7 +479,8 @@ protected:
 				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DepthTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL }),
 				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates.back(), &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DUT1, &DUI);
+			vkDestroyDescriptorUpdateTemplate(Device, DUT1, GetAllocationCallbacks());
 		}
 #pragma endregion
 	}

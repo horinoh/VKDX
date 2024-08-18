@@ -36,6 +36,27 @@ public:
 	void CreatePipelineState_AsMsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs);
 	void CreatePipelineState_MsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_AsMsPs(PST, RS, DepthEnable, { NullSBC, SBCs[0], SBCs[1] }); }
 
+#if 0
+	void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST,
+		ID3D12RootSignature* RS,
+		D3D12_SHADER_BYTECODE VS, D3D12_SHADER_BYTECODE PS, D3D12_SHADER_BYTECODE DS, D3D12_SHADER_BYTECODE HS, D3D12_SHADER_BYTECODE GS,
+		D3D12_STREAM_OUTPUT_DESC SOD,
+		D3D12_BLEND_DESC BD,
+		UINT SampleMask,
+		D3D12_RASTERIZER_DESC RD,
+		D3D12_DEPTH_STENCIL_DESC DSD,
+		D3D12_INPUT_LAYOUT_DESC ILD,
+		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBSCV,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+		std::vector<DXGI_FORMAT>& RTVFormats,
+		//UINT NumRenderTargets, DXGI_FORMAT RTVFormats[8],
+		DXGI_FORMAT DSVFormat,
+		DXGI_SAMPLE_DESC SD,
+		UINT NodeMask,
+		D3D12_CACHED_PIPELINE_STATE CPS,
+		D3D12_PIPELINE_STATE_FLAGS PSF);
+#endif
+
 	void CreateStaticSampler_Default(const UINT ShaderRegister, const UINT RegisterSpace, const D3D12_SHADER_VISIBILITY ShaderVisibility, const D3D12_FILTER Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR, const D3D12_TEXTURE_ADDRESS_MODE AddressMode = D3D12_TEXTURE_ADDRESS_MODE_WRAP) {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = Filter,

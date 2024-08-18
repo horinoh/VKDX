@@ -144,3 +144,49 @@ void DXExt::CreatePipelineState_AsMsPs(COM_PTR<ID3D12PipelineState>& PST, ID3D12
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineStateAsMsPs, std::ref(PST), COM_PTR_GET(Device), RS, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, nullptr, nullptr));
 #endif	
 }
+
+#if 0
+void DXExt::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST,
+	ID3D12RootSignature* RS,
+	D3D12_SHADER_BYTECODE VS, D3D12_SHADER_BYTECODE PS, D3D12_SHADER_BYTECODE DS, D3D12_SHADER_BYTECODE HS, D3D12_SHADER_BYTECODE GS,
+	D3D12_STREAM_OUTPUT_DESC SOD,
+	D3D12_BLEND_DESC BD,
+	UINT SampleMask,
+	D3D12_RASTERIZER_DESC RD,
+	D3D12_DEPTH_STENCIL_DESC DSD,
+	D3D12_INPUT_LAYOUT_DESC ILD,
+	D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBSCV,
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+	std::vector<DXGI_FORMAT>& RTVFormats,
+	//UINT NumRenderTargets, DXGI_FORMAT RTVFormats[8],
+	DXGI_FORMAT DSVFormat,
+	DXGI_SAMPLE_DESC SD,
+	UINT NodeMask,
+	D3D12_CACHED_PIPELINE_STATE CPS,
+	D3D12_PIPELINE_STATE_FLAGS PSF)
+{
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
+		.pRootSignature = RS,
+		.VS = VS, .PS = PS, .DS = DS, .HS = HS, .GS = GS,
+		.StreamOutput = SOD,
+		.BlendState = BD,
+		.SampleMask = SampleMask,
+		.RasterizerState = RD,
+		.DepthStencilState = DSD,
+		.InputLayout = ILD,
+		.IBStripCutValue = IBSCV,
+		.PrimitiveTopologyType = PTT,
+		.NumRenderTargets = static_cast<UINT>(std::size(RTVFormats)), .RTVFormats = {},//std::data(RTVFormats),
+		.DSVFormat = DSVFormat,
+		.SampleDesc = SD,
+		.NodeMask = NodeMask,
+		.CachedPSO = CPS,
+#if defined(_DEBUG) && defined(USE_WARP)
+		//!< パイプラインがデバッグ用付加情報ありでコンパイルされる、WARP時のみ使用可能
+		.Flags = PSF | D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
+#else
+		.Flags = PSF
+#endif
+	};
+}
+#endif

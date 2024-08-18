@@ -27,6 +27,14 @@ protected:
 	}
 #endif
 
+	using SizeAndDataPtr = std::pair<const size_t, const void*>;
+	struct GeometryCreateInfo {
+		std::vector<SizeAndDataPtr> Vtxs = {};
+		SizeAndDataPtr Idx = { 0, nullptr };
+		uint32_t IdxCount = 0, VtxCount = 0, InstCount = 0;
+	};
+	void CreateGeometry(const std::vector<GeometryCreateInfo>& GCIs);
+
 	void CreateTexture_Depth(const uint32_t Width, const uint32_t Height) {
 		DepthTextures.emplace_back().Create(Device, SelectedPhysDevice.second.PDMP, DepthFormat, VkExtent3D({ .width = Width, .height = Height, .depth = 1 }));
 	}
@@ -68,6 +76,68 @@ protected:
 
 	void CreatePipeline_TsMsFs(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs);
 	void CreatePipeline_MsFs(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(PL, PLL, RP, DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
+
+	void CreatePipeline(VkPipeline& PL,
+		const std::vector<VkPipelineShaderStageCreateInfo>& PSSCIs,
+		const VkPipelineVertexInputStateCreateInfo& PVISCI,
+		const VkPipelineInputAssemblyStateCreateInfo& PIASCI,
+		const VkPipelineTessellationStateCreateInfo& PTSCI,
+		const VkPipelineViewportStateCreateInfo& PVSCI,
+		const VkPipelineRasterizationStateCreateInfo& PRSCI,
+		const VkPipelineMultisampleStateCreateInfo& PMSCI,
+		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
+		const VkPipelineColorBlendStateCreateInfo& PCBSCI,
+		const VkPipelineDynamicStateCreateInfo& PDSCI,
+		const VkPipelineLayout PLL,
+		const VkRenderPass RP);
+	void CreatePipeline(VkPipeline& PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS,
+		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
+		const VkPrimitiveTopology PT,
+		const uint32_t PatchControlPoints,
+		const VkPolygonMode PM, const VkCullModeFlags CMF, const VkFrontFace FF,
+		const VkBool32 DepthEnable,
+		const VkPipelineLayout PLL,
+		const VkRenderPass RP);
+	void CreatePipeline(VkPipeline& PL,
+		const VkShaderModule VS, const VkShaderModule FS,
+		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
+		const VkPipelineLayout PLL,
+		const VkRenderPass RP) {
+		CreatePipeline(PL,
+			VS, FS, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE,
+			VIBDs, VIADs,
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+			0,
+			VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_FALSE,
+			PLL,
+			RP);
+	}
+	void CreatePipeline(VkPipeline& PL,
+		const VkShaderModule VS, const VkShaderModule FS,
+		const VkPipelineLayout PLL,
+		const VkRenderPass RP) {
+		CreatePipeline(PL,
+			VS, FS,
+			{}, {},
+			PLL,
+			RP);
+	}
+	void CreatePipeline(VkPipeline& PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS,
+		const VkPipelineLayout PLL,
+		const VkRenderPass RP) {
+		CreatePipeline(PL,
+			VS, FS, TCS, TES, GS,
+			{}, {},
+			VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
+			1,
+			VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_TRUE,
+			PLL,
+			RP);
+	}
 
 	void CreateFrameBuffer_Default() {
 		for (const auto& i : Swapchain.ImageAndViews) {

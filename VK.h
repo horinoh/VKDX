@@ -1552,7 +1552,6 @@ protected:
 
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
-	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

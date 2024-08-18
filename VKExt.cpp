@@ -1,5 +1,107 @@
 #include "VKExt.h"
 
+void VKExt::CreateGeometry([[maybe_unused]]const std::vector<VKExt::GeometryCreateInfo>& GCIs)
+{
+#if 0
+	struct GeometryCreateCommand {
+		const VKExt::GeometryCreateInfo* GCI = nullptr;
+
+		std::vector<StagingBuffer> VertexStagingBuffers = {};
+		StagingBuffer IndexStagingBuffer;
+		StagingBuffer IndirectStagingBuffer;
+
+		VkDrawIndexedIndirectCommand DIIC;
+		VkDrawIndirectCommand DIC;
+
+		size_t VertexStart = 0, IndexStart = 0, IndirectStart = 0;
+	};
+	std::vector<GeometryCreateCommand> GCCs;
+
+	for (const auto& i : GCIs) {
+		auto& GCC = GCCs.emplace_back();
+		GCC.GCI = &i;
+
+		//!< バーテックスバッファ、ステージングの作成 (Create vertex buffer, staging)
+		for (const auto& i : i.Vtxs) {
+			auto& VSB = GCC.VertexStagingBuffers.emplace_back(BufferAndDeviceMemory({ VK_NULL_HANDLE, VK_NULL_HANDLE }));
+			GCC.VertexStart = std::size(VertexBuffers);
+			CreateDeviceLocalBuffer(VertexBuffers.emplace_back(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, i.first);
+			CreateHostVisibleBuffer(&VSB.first, &VSB.second, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, i.first, i.second);
+		}
+
+		//!< インデックスバッファ、ステージングの作成 (Create index buffer, staging)
+		const auto HasIdx = i.Idx.first != 0 && i.Idx.second != nullptr && i.IdxCount != 0;
+		if (HasIdx) {
+			GCC.IndexStart = std::size(IndexBuffers);
+			CreateDeviceLocalBuffer(IndexBuffers.emplace_back(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, i.Idx.first);
+			CreateHostVisibleBuffer(&GCC.IndexStagingBuffer.first, &GCC.IndexStagingBuffer.second, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, i.Idx.first, i.Idx.second);
+		}
+
+		//!< インダイレクトバッファ、ステージングの作成 (Create indirect buffer, staging)
+		GCC.IndirectStart = std::size(IndirectBuffers);
+		if (HasIdx) {
+			GCC.DIIC = VkDrawIndexedIndirectCommand({
+				.indexCount = i.IdxCount,
+				.instanceCount = i.InstCount,
+				.firstIndex = 0,
+				.vertexOffset = 0,
+				.firstInstance = 0
+				});
+			CreateDeviceLocalBuffer(IndirectBuffers.emplace_back(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, sizeof(GCC.DIIC));
+			CreateHostVisibleBuffer(&GCC.IndirectStagingBuffer.first, &GCC.IndirectStagingBuffer.second, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeof(GCC.DIIC), &GCC.DIIC);
+		}
+		else {
+			GCC.DIC = VkDrawIndirectCommand({
+				.vertexCount = i.VtxCount,
+				.instanceCount = i.InstCount,
+				.firstVertex = 0,
+				.firstInstance = 0
+				});
+			CreateDeviceLocalBuffer(IndirectBuffers.emplace_back(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, sizeof(GCC.DIC));
+			CreateHostVisibleBuffer(&GCC.IndirectStagingBuffer.first, &GCC.IndirectStagingBuffer.second, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeof(GCC.DIC), &GCC.DIC);
+		}
+	}
+
+	const auto& CB = CommandBuffers[0];
+	constexpr VkCommandBufferBeginInfo CBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		for (const auto& i : GCCs) {
+			for (auto j = 0; j < std::size(i.GCI->Vtxs); ++j) {
+				PopulateCopyCommand(CB, i.VertexStagingBuffers[j].first, VertexBuffers[i.VertexStart + j].first, i.GCI->Vtxs[j].first, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+			}
+			if (VK_NULL_HANDLE != i.IndexStagingBuffer.first) {
+				PopulateCopyCommand(CB, i.IndexStagingBuffer.first, IndexBuffers[i.IndexStart].first, i.GCI->Idx.first, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+				PopulateCopyCommand(CB, i.IndirectStagingBuffer.first, IndirectBuffers[i.IndirectStart].first, sizeof(i.DIIC), VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+			}
+			else {
+				PopulateCopyCommand(CB, i.IndirectStagingBuffer.first, IndirectBuffers[i.IndirectStart].first, sizeof(i.DIC), VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+			}
+		}
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+
+	//!< コピーコマンド発行 (Submit copy command)
+	SubmitAndWait(CB);
+
+	for (const auto& i : GCCs) {
+		for (auto& i : i.VertexStagingBuffers) {
+			vkFreeMemory(Device, i.second, nullptr);
+			vkDestroyBuffer(Device, i.first, nullptr);
+		}
+		if (VK_NULL_HANDLE != i.IndexStagingBuffer.first) {
+			vkFreeMemory(Device, i.IndexStagingBuffer.second, nullptr);
+			vkDestroyBuffer(Device, i.IndexStagingBuffer.first, nullptr);
+		}
+		vkFreeMemory(Device, i.IndirectStagingBuffer.second, nullptr);
+		vkDestroyBuffer(Device, i.IndirectStagingBuffer.first, nullptr);
+	}
+#endif
+}
+
 void VKExt::CreateRenderPass_Default(const VkAttachmentLoadOp LoadOp, const VkImageLayout FinalLayout)
 {
 	constexpr std::array<VkAttachmentReference, 0> IAs = {};
@@ -279,6 +381,181 @@ void VKExt::CreatePipeline_TsMsFs(VkPipeline& PL, const VkPipelineLayout PLL, co
 #else
 	Threads.emplace_back(std::thread::thread(Super::CreatePipelineTsMsFs, std::ref(PL), Device, PLL, RP, PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, VK_NULL_HANDLE));
 #endif
+}
+
+void VKExt::CreatePipeline(VkPipeline& PL,
+	const std::vector<VkPipelineShaderStageCreateInfo>& PSSCIs,
+	const VkPipelineVertexInputStateCreateInfo& PVISCI,
+	const VkPipelineInputAssemblyStateCreateInfo& PIASCI,
+	const VkPipelineTessellationStateCreateInfo& PTSCI,
+	const VkPipelineViewportStateCreateInfo& PVSCI,
+	const VkPipelineRasterizationStateCreateInfo& PRSCI,
+	const VkPipelineMultisampleStateCreateInfo& PMSCI,
+	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
+	const VkPipelineColorBlendStateCreateInfo& PCBSCI,
+	const VkPipelineDynamicStateCreateInfo& PDSCI,
+	const VkPipelineLayout PLL,
+	const VkRenderPass RP)
+{
+	const std::array GPCIs = {
+		VkGraphicsPipelineCreateInfo({
+			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			.pNext = nullptr,
+#ifdef _DEBUG
+			.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+#else
+			.flags = 0,
+#endif
+			.stageCount = static_cast<uint32_t>(std::size(PSSCIs)), .pStages = std::data(PSSCIs),
+			.pVertexInputState = &PVISCI,
+			.pInputAssemblyState = &PIASCI,
+			.pTessellationState = &PTSCI,
+			.pViewportState = &PVSCI,
+			.pRasterizationState = &PRSCI,
+			.pMultisampleState = &PMSCI,
+			.pDepthStencilState = &PDSSCI,
+			.pColorBlendState = &PCBSCI,
+			.pDynamicState = &PDSCI,
+			.layout = PLL,
+			.renderPass = RP, .subpass = 0,
+			.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
+		})
+	};
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, static_cast<uint32_t>(std::size(GPCIs)), std::data(GPCIs), nullptr, &PL));
+}
+void VKExt::CreatePipeline(VkPipeline& PL,
+	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS,
+	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
+	const VkPrimitiveTopology PT,
+	const uint32_t PatchControlPoints,
+	const VkPolygonMode PM, const VkCullModeFlags CMF, const VkFrontFace FF,
+	const VkBool32 DepthEnable,
+	const VkPipelineLayout PLL,
+	const VkRenderPass RP)
+{
+	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
+	if (VK_NULL_HANDLE != VS) {
+		PSSCIs.emplace_back(VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = VS, .pName = "main", .pSpecializationInfo = nullptr }));
+	}
+	if (VK_NULL_HANDLE != FS) {
+		PSSCIs.emplace_back(VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = FS, .pName = "main", .pSpecializationInfo = nullptr }));
+	}
+	if (VK_NULL_HANDLE != TCS) {
+		PSSCIs.emplace_back(VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = TCS, .pName = "main", .pSpecializationInfo = nullptr }));
+	}
+	if (VK_NULL_HANDLE != TES) {
+		PSSCIs.emplace_back(VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .module = TES, .pName = "main", .pSpecializationInfo = nullptr }));
+	}
+	if (VK_NULL_HANDLE != GS) {
+		PSSCIs.emplace_back(VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = GS, .pName = "main", .pSpecializationInfo = nullptr }));
+	}
+
+	const VkPipelineVertexInputStateCreateInfo PVISCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.vertexBindingDescriptionCount = static_cast<uint32_t>(std::size(VIBDs)), .pVertexBindingDescriptions = std::data(VIBDs),
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(std::size(VIADs)), .pVertexAttributeDescriptions = std::data(VIADs)
+	};
+
+	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.topology = PT,
+		.primitiveRestartEnable = VK_FALSE
+	};
+
+	const VkPipelineTessellationStateCreateInfo PTSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.patchControlPoints = PatchControlPoints
+	};
+
+	//!< ダイナミックステートにするのでここでは決め打ち
+	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.viewportCount = 1, .pViewports = nullptr,
+		.scissorCount = 1, .pScissors = nullptr
+	};
+
+	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.depthClampEnable = VK_FALSE,
+		.rasterizerDiscardEnable = VK_FALSE,
+		.polygonMode = PM,
+		.cullMode = CMF,
+		.frontFace = FF,
+		.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
+		.lineWidth = 1.0f
+	};
+
+	constexpr VkSampleMask SM = 0xffffffff;
+	const VkPipelineMultisampleStateCreateInfo PMSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+		.sampleShadingEnable = VK_FALSE, .minSampleShading = 0.0f,
+		.pSampleMask = &SM,
+		.alphaToCoverageEnable = VK_FALSE, .alphaToOneEnable = VK_FALSE
+	};
+
+	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.depthTestEnable = DepthEnable, .depthWriteEnable = DepthEnable, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE,
+		.front = VkStencilOpState({
+			.failOp = VK_STENCIL_OP_KEEP,
+			.passOp = VK_STENCIL_OP_KEEP,
+			.depthFailOp = VK_STENCIL_OP_KEEP,
+			.compareOp = VK_COMPARE_OP_NEVER,
+			.compareMask = 0, .writeMask = 0, .reference = 0
+		}),
+		.back = VkStencilOpState({
+			.failOp = VK_STENCIL_OP_KEEP,
+			.passOp = VK_STENCIL_OP_KEEP,
+			.depthFailOp = VK_STENCIL_OP_KEEP,
+			.compareOp = VK_COMPARE_OP_ALWAYS,
+			.compareMask = 0, .writeMask = 0, .reference = 0
+		}),
+		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
+	};
+
+	constexpr std::array PCBASs = {
+		VkPipelineColorBlendAttachmentState({
+			.blendEnable = VK_FALSE,
+			.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		}),
+	};
+	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.logicOpEnable = VK_FALSE, .logicOp = VK_LOGIC_OP_COPY,
+		.attachmentCount = static_cast<uint32_t>(std::size(PCBASs)), .pAttachments = std::data(PCBASs),
+		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+
+	constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, };
+	const VkPipelineDynamicStateCreateInfo PDSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.dynamicStateCount = static_cast<uint32_t>(std::size(DSs)), .pDynamicStates = std::data(DSs)
+	};
+
+	CreatePipeline(PL, PSSCIs, PVISCI, PIASCI, PTSCI, PVSCI, PRSCI, PMSCI, PDSSCI, PCBSCI, PDSCI, PLL, RP);
 }
 
 #if 0
