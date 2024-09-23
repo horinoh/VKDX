@@ -533,7 +533,7 @@ void DX::GetDisplayModeList([[maybe_unused]] IDXGIOutput* Outp, [[maybe_unused]]
 	if (Count) [[likely]] {
 		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatChar(Format));
 		std::vector<DXGI_MODE_DESC> MDs(Count);
-		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, data(MDs)));
+		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, std::data(MDs)));
 		for (const auto& i : MDs) {
 			std::cout << i;
 		}

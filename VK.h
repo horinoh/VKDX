@@ -3,6 +3,7 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <span>
 
 //!< VK_NO_PROTOYYPES(VK.props) が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
 
