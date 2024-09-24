@@ -156,21 +156,21 @@ public:
 			Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			return *this;
 		}
-		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
+		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags2 AF, const VkPipelineStageFlagBits2 PSF) {
 			BufferMemoryBarrier(CB,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 				Buffer,
-				0, VK_ACCESS_MEMORY_WRITE_BIT);
+				0, VK_ACCESS_2_MEMORY_WRITE_BIT);
 			{
 				const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
 				vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(std::size(BCs)), std::data(BCs));
 			}
 			BufferMemoryBarrier(CB,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
+				VK_PIPELINE_STAGE_2_TRANSFER_BIT, PSF,
 				Buffer,
-				VK_ACCESS_MEMORY_WRITE_BIT, AF);
+				VK_ACCESS_2_MEMORY_WRITE_BIT, AF);
 		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source, const VkAccessFlags2 AF, const VkPipelineStageFlagBits2 PSF) {
 			VK::Scoped<StagingBuffer> Staging(Device);
 			Staging.Create(Device, PDMP, Size, Source);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -210,10 +210,10 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		}
 	};
 	class IndexBuffer : public DeviceLocalBuffer
@@ -226,10 +226,10 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_2_INDEX_READ_BIT, VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_2_INDEX_READ_BIT, VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		}
 	};
 	class IndirectBuffer : public DeviceLocalBuffer
@@ -256,10 +256,10 @@ public:
 		}
 #pragma endregion
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
 		}
 	};
 	class UniformBuffer : public BufferMemory
@@ -386,9 +386,9 @@ public:
 		//!< 例) 頻繁にレイアウトの変更や戻しが必要になるような場合 UNDEFINED へは戻せないので、戻せるレイアウトである GENERAL を初期レイアウトとしておく
 		void PopulateSetLayoutCommand(const VkCommandBuffer CB, const VkImageLayout Layout) {
 			ImageMemoryBarrier(CB,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				Image,
-				0, VK_ACCESS_TRANSFER_WRITE_BIT,
+				0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED, Layout);
 		}
 		void SubmitSetLayoutCommand(const VkCommandBuffer CB, const VkQueue Queue, const VkImageLayout Layout = VK_IMAGE_LAYOUT_GENERAL) {
@@ -449,7 +449,7 @@ public:
 		void UpdateStagingBuffer(const VkDevice Device, const size_t Size, const void* Src) {
 			CopyToDeviceMemory(&StagingBuffer.DeviceMemory, Device, Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Src);
 		}
-		void PopulateStagingToImageCommand(VkCommandBuffer CB, const uint32_t Width, const uint32_t Height, const VkPipelineStageFlags PSF) {
+		void PopulateStagingToImageCommand(VkCommandBuffer CB, const uint32_t Width, const uint32_t Height, const VkPipelineStageFlags2 PSF) {
 			PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Image, Width, Height, 1, PSF);
 		}
 		virtual void Destroy(const VkDevice Device) override {
@@ -460,7 +460,7 @@ public:
 		BufferMemory StagingBuffer;
 	};
 
-	void UpdateTexture(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags PSF) {
+	void UpdateTexture(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags2 PSF) {
 		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
@@ -478,8 +478,8 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
-	void UpdateTexture2(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags PSF,
-		Texture& Tex1, const uint32_t Width1, const uint32_t Height1, const uint32_t Bpp1, const void* Data1, const VkPipelineStageFlags PSF1) {
+	void UpdateTexture2(Texture& Tex, const uint32_t Width, const uint32_t Height, const uint32_t Bpp, const void* Data, const VkPipelineStageFlags2 PSF,
+		Texture& Tex1, const uint32_t Width1, const uint32_t Height1, const uint32_t Bpp1, const void* Data1, const VkPipelineStageFlags2 PSF1) {
 		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		const auto CB = CommandBuffers[0];
 
@@ -530,9 +530,9 @@ public:
 	}
 
 	static void BufferMemoryBarrier(const VkCommandBuffer CB,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkPipelineStageFlags2 SrcStage, const VkPipelineStageFlags2 DstStage,
 		const VkBuffer Buffer,
-		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess)
+		const VkAccessFlags2 SrcAccess, const VkAccessFlags2 DstAccess)
 	{
 #ifdef USE_SYNCHRONIZATION2
 		constexpr std::array<VkMemoryBarrier2, 0> MBs = {};
@@ -576,9 +576,9 @@ public:
 #endif
 	}
 	static void ImageMemoryBarrier(const VkCommandBuffer CB,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkPipelineStageFlags2 SrcStage, const VkPipelineStageFlags2 DstStage,
 		const VkImage Image,
-		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
+		const VkAccessFlags2 SrcAccess, const VkAccessFlags2 DstAccess,
 		const VkImageLayout OldLayout, const VkImageLayout NewLayout,
 		const VkImageSubresourceRange& ISR)
 	{
@@ -629,9 +629,9 @@ public:
 #endif
 	}
 	static void ImageMemoryBarrier(const VkCommandBuffer CB,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkPipelineStageFlags2 SrcStage, const VkPipelineStageFlags2 DstStage,
 		const VkImage Image,
-		const VkAccessFlags SrcAccess, const VkAccessFlags DstAccess,
+		const VkAccessFlags2 SrcAccess, const VkAccessFlags2 DstAccess,
 		const VkImageLayout OldLayout, const VkImageLayout NewLayout)
 	{
 		ImageMemoryBarrier(CB,
@@ -646,12 +646,12 @@ public:
 				}));
 	}
 	static void ImageMemoryBarrier2(const VkCommandBuffer CB,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkPipelineStageFlags2 SrcStage, const VkPipelineStageFlags2 DstStage,
 		const VkImage Image0,
-		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
+		const VkAccessFlags2 SrcAccess0, const VkAccessFlags2 DstAccess0,
 		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
 		const VkImage Image1,
-		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1,
+		const VkAccessFlags2 SrcAccess1, const VkAccessFlags2 DstAccess1,
 		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1,
 		const VkImageSubresourceRange& ISR)
 	{
@@ -719,12 +719,12 @@ public:
 #endif
 	}
 	static void ImageMemoryBarrier2(const VkCommandBuffer CB,
-		const VkPipelineStageFlags SrcStage, const VkPipelineStageFlags DstStage,
+		const VkPipelineStageFlags2 SrcStage, const VkPipelineStageFlags2 DstStage,
 		const VkImage Image0,
-		const VkAccessFlags SrcAccess0, const VkAccessFlags DstAccess0,
+		const VkAccessFlags2 SrcAccess0, const VkAccessFlags2 DstAccess0,
 		const VkImageLayout OldLayout0, const VkImageLayout NewLayout0,
 		const VkImage Image1,
-		const VkAccessFlags SrcAccess1, const VkAccessFlags DstAccess1,
+		const VkAccessFlags2 SrcAccess1, const VkAccessFlags2 DstAccess1,
 		const VkImageLayout OldLayout1, const VkImageLayout NewLayout1)
 	{
 		ImageMemoryBarrier2(CB,
@@ -837,7 +837,7 @@ public:
 	}
 
 #pragma region COMMAND
-	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const VkPipelineStageFlags PSF) {
+	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const VkPipelineStageFlags2 PSF) {
 		std::vector<VkBufferImageCopy2> BICs;
 		for (uint32_t i = 0; i < Layers; ++i) {
 			BICs.emplace_back(
@@ -851,27 +851,27 @@ public:
 					})
 			);
 		}
-		PopulateCopyBufferToImageCommand(CB, Src, Dst, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 1);
+		PopulateCopyBufferToImageCommand(CB, Src, Dst, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 1);
 	}
-	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy2>& BICs, const uint32_t Levels, const uint32_t Layers);
+	static void PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags2 AF, const VkImageLayout IL, const VkPipelineStageFlags2 PSF, const std::vector<VkBufferImageCopy2>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 	static void PopulateBeginRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget) {
 		ImageMemoryBarrier(CB,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 			RenderTarget,
-			0, VK_ACCESS_TRANSFER_READ_BIT,
+			0, VK_ACCESS_2_TRANSFER_READ_BIT,
 			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 	}
 	static void PopulateEndRenderTargetCommand(const VkCommandBuffer CB, const VkImage RenderTarget, const VkImage Swapchain, const uint32_t Width, const uint32_t Height) {
 		ImageMemoryBarrier2(CB,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 
 			RenderTarget,
-			0, VK_ACCESS_TRANSFER_READ_BIT,
+			0, VK_ACCESS_2_TRANSFER_READ_BIT,
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 
 			Swapchain,
-			0, VK_ACCESS_TRANSFER_WRITE_BIT,
+			0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		{
 			const std::array IC2s = {
@@ -895,9 +895,9 @@ public:
 			vkCmdCopyImage2(CB, &CII2);
 		}
 		ImageMemoryBarrier(CB,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 			Swapchain,
-			0, VK_ACCESS_TRANSFER_WRITE_BIT,
+			0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 #pragma endregion
@@ -1148,7 +1148,7 @@ protected:
 	virtual void CreateShaderBindingTable() {}
 
 	virtual void CreateTexture() {}
-	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);
+	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags2 PSF);
 	virtual void CreateImmutableSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps);

@@ -96,7 +96,7 @@ public:
 		void CopyToStagingBuffer(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, StagingBuffer& Staging) {
 			Staging.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), GliTexture.data());
 		}
-		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
+		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags2 PSF, const VkBuffer Staging) {
 			//!< キューブマップの場合は、複数レイヤのイメージとして作成する。(When cubemap, create as layered image)
 			//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える (Tell the hardware that it should interpret its layers as faces)
 			//!< キューブマップの場合フェイスの順序は +X-X+Y-Y+Z-Z (When cubemap, faces order is +X-X+Y-Y+Z-Z)
@@ -116,9 +116,9 @@ public:
 					Offset += static_cast<const VkDeviceSize>(GliTexture.size(j));
 				}
 			}
-			VK::PopulateCopyBufferToImageCommand(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, Levels, Layers);
+			VK::PopulateCopyBufferToImageCommand(CB, Staging, Image, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, Levels, Layers);
 		}
-		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
+		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties& PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags2 PSF) {
 			VK::Scoped<StagingBuffer> Staging(Dev);
 			CopyToStagingBuffer(Dev, PDMP, Staging);
 

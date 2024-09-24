@@ -29,7 +29,7 @@ protected:
 		const auto CB = CommandBuffers[i];
 
 		//!< ステージングバッファからテクスチャへコピーするコマンド (Copy from staging buffer to texture)
-		AnimatedTextures[0].PopulateStagingToImageCommand(CB, W, H, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		AnimatedTextures[0].PopulateStagingToImageCommand(CB, W, H, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
 	}
 
 	virtual void CreateGeometry() override {

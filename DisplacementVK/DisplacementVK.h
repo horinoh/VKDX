@@ -68,8 +68,8 @@ protected:
 				.pInheritanceInfo = nullptr
 			};
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				GLITextures[0].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, Staging0.Buffer);
-				GLITextures[1].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, Staging1.Buffer);
+				GLITextures[0].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, Staging0.Buffer);
+				GLITextures[1].PopulateCopyCommand(CB, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, Staging1.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(GraphicsQueue, CB);
 		}

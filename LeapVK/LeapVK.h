@@ -60,8 +60,8 @@ protected:
 			UpdateDistortionImage();
 		}
 #else	
-		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 }, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff }, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 }, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
+		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff }, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
 #endif
 	}
 	virtual void CreateImmutableSampler() override {

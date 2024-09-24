@@ -125,17 +125,17 @@ public:
 			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
 #endif
 			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT);
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_2_NONE_KHR, VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT);
 			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices8), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices8), data(VertexIndices8), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT);
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices8), data(VertexIndices8), VK_ACCESS_2_NONE_KHR, VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT);
 
 			VkPhysicalDeviceProperties PDP = {}; vkGetPhysicalDeviceProperties(SelectedPhysDevice.first, &PDP);
 			assert(TotalSizeOf(Meshlets) == Cmn::RoundUp(TotalSizeOf(Meshlets), PDP.limits.minStorageBufferOffsetAlignment));
 			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT); 
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_2_NONE_KHR, VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT); 
 			assert(TotalSizeOf(Triangles) == Cmn::RoundUp(TotalSizeOf(Triangles), PDP.limits.minStorageBufferOffsetAlignment));
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT);
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_2_NONE_KHR, VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT);
 
 			const VkDrawMeshTasksIndirectCommandEXT DMTIC = { .groupCountX = static_cast<uint32_t>(IterationCount(size(Meshlets), 32)), .groupCountY = 1, .groupCountZ = 1 };
 			Logf("Meshlet Chunk Count = %d\n", DMTIC.groupCountX);

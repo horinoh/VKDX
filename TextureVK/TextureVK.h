@@ -21,7 +21,7 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto& PDMP = SelectedPhysDevice.second.PDMP;
-		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
 #ifdef _DEBUG
 		VkImageFormatProperties IFP;
 		GLITextures.back().GetPhysicalDeviceImageFormatProperties(IFP, SelectedPhysDevice.first);
