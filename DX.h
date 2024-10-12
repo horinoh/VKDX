@@ -1,7 +1,7 @@
 #pragma once
- 
+
 //!< CCOM, WINRT, WRL ‚ª‘I‘ð‰Â”\
-#define USE_CCOMPTR
+//#define USE_CCOMPTR
 #define USE_WINRT
 
 #ifdef USE_CCOMPTR
@@ -42,8 +42,8 @@
 
 #ifndef VERIFY_SUCCEEDED
 #ifdef _DEBUG
-//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(data(std::system_category().message(_HR) + "\n")); DEBUG_BREAK(); } }
-//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { MessageBoxA(nullptr, data(std::system_category().message(_HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
+//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(data(std::system_category().message(_HR) + "\n")); BREAKPOINT(); } }
+//#define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { MessageBoxA(nullptr, data(std::system_category().message(_HR)), "", MB_OK); BREAKPOINT(); /*throw std::runtime_error("");*/ } }
 #define VERIFY_SUCCEEDED(X) { const auto _HR = (X); if(FAILED(_HR)) { OutputDebugStringA(std::data(std::format("HRESULT = {:#x}\n", static_cast<UINT32>(_HR)))); __debugbreak(); } }
 #else
 #define VERIFY_SUCCEEDED(X) (X) 

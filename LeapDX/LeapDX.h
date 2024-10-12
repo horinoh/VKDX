@@ -203,7 +203,7 @@ protected:
 
 			const auto& RAH = SwapChain.ResourceAndHandles[i];
 
-			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				auto SCCDH = SwapChain.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 				SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChain.DescriptorHeap->GetDesc().Type);
@@ -228,7 +228,7 @@ protected:
 
 				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(CL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(CL->Close());
 	}

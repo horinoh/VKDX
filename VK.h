@@ -29,8 +29,8 @@
 
 #ifndef VERIFY_SUCCEEDED
 #ifdef _DEBUG
-//#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { OutputDebugStringA(data(std::string(VK::GetVkResultChar(VR)) + "\n")); DEBUG_BREAK(); } }
-#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { MessageBoxA(nullptr, VK::GetVkResultChar(VR), "", MB_OK); DEBUG_BREAK(); } }
+//#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { OutputDebugStringA(data(std::string(VK::GetVkResultChar(VR)) + "\n")); BREAKPOINT(); } }
+#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { MessageBoxA(nullptr, VK::GetVkResultChar(VR), "", MB_OK); BREAKPOINT(); } }
 #else
 #define VERIFY_SUCCEEDED(X) (X)
 #endif
@@ -1345,13 +1345,13 @@ public:
 	static void SetObjectTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkObjectType ObjectType, [[maybe_unused]] const uint64_t ObjectHandle, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData);
 	static void SetObjectTag(VkDevice Device, const VkObjectType ObjectType, const uint64_t ObjectHandle, const uint64_t TagName, const std::vector<std::byte>& TagData) { SetObjectTag(Device, ObjectType, ObjectHandle, TagName, size(TagData), data(TagData)); }
 	
-	template<typename T> static void SetObjectName(VkDevice Device, T Object, const std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	template<typename T> static void SetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void SetObjectName(VkDevice Device, T Object, const std::string_view Name) { BREAKPOINT(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void SetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { BREAKPOINT(); /* テンプレート特殊化されていない (Not template specialized) */ }
 #include "VKDebugUtilsNameTag.inl"
 
-	template<typename T> static void InsertLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	template<typename T> static void BeginLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	template<typename T> static void EndLabel([[maybe_unused]] T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void InsertLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { BREAKPOINT(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void BeginLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { BREAKPOINT(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void EndLabel([[maybe_unused]] T Object) { BREAKPOINT(); /* テンプレート特殊化されていない (Not template specialized) */ }
 #include "VKDebugUtilsLabel.inl"
 
 	template<typename T> class ScopedLabel

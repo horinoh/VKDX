@@ -62,17 +62,17 @@ protected:
 		{
 			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs0;
 			COM_PTR<ID3D12Resource> Upload0;
-			XTKTextures[0].CopyToUploadResource(Device, COM_PTR_PUT(Upload0), PSFs0);
+			XTKTextures[0].CopyToUploadResource(COM_PTR_GET(Device), COM_PTR_PUT(Upload0), PSFs0);
 
 			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs1;
 			COM_PTR<ID3D12Resource> Upload1;
-			XTKTextures[1].CopyToUploadResource(Device, COM_PTR_PUT(Upload1), PSFs1);
+			XTKTextures[1].CopyToUploadResource(COM_PTR_GET(Device), COM_PTR_PUT(Upload1), PSFs1);
 
 			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 				XTKTextures[0].PopulateCopyCommand(CL, PSFs0, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload0));
 				XTKTextures[1].PopulateCopyCommand(CL, PSFs1, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, COM_PTR_GET(Upload1));
 			} VERIFY_SUCCEEDED(CL->Close());
-			DX::ExecuteAndWait(GraphicsCommandQueue, CL, GraphicsFence);
+			DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), CL, COM_PTR_GET(GraphicsFence));
 			XTKTextures[0].Release();
 			XTKTextures[1].Release();
 		}
@@ -229,7 +229,7 @@ protected:
 
 			const auto& RAH = SwapChain.ResourceAndHandles[i];
 
-			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(DCL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
@@ -260,7 +260,7 @@ protected:
 				}
 				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(DCL->Close());
 	}

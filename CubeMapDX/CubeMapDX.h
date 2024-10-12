@@ -231,7 +231,7 @@ protected:
 
 			const auto& RAH = SwapChain.ResourceAndHandles[i];
 
-			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(DCL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const auto& HandleDSV = DsvDescs[0].second;
 
@@ -266,7 +266,7 @@ protected:
 
 				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(DCL, RAH.first, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, COM_PTR_GET(RAH.first), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(DCL->Close());
 	}

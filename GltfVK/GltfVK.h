@@ -370,7 +370,7 @@ public:
 		case UnsignedShort: return VK_INDEX_TYPE_UINT16;
 		case UnsignedInt: return VK_INDEX_TYPE_UINT32;
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return VK_INDEX_TYPE_MAX_ENUM;
 	}
 
@@ -386,7 +386,7 @@ public:
 		case TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		case TriangleFan: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 	}
 
@@ -442,7 +442,7 @@ public:
 		//case Mat3:
 		//case Mat4:
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return VK_FORMAT_UNDEFINED;
 	}
 

@@ -92,11 +92,19 @@
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
 #endif
 
-#ifndef DEBUG_BREAK
+//!< std::breakpoint() c++26
+#ifdef _WIN64
 #ifdef _DEBUG
-#define DEBUG_BREAK() __debugbreak()
+#define BREAKPOINT() __debugbreak()
 #else
-#define DEBUG_BREAK()
+#define BREAKPOINT()
+#endif
+#else
+#ifdef _DEBUG
+#include <signal.h>
+#define BREAKPOINT() raise(SIGTRAP)
+#else
+#define BREAKPOINT()
 #endif
 #endif
 

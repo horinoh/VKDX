@@ -279,18 +279,18 @@ bool DX::CompileShader(LPCWSTR ShaderPath, LPCWSTR Target, ID3DBlob** Blob)
 		COM_PTR<IDxcLibrary> DL;
 		VERIFY_SUCCEEDED(DxcCreateInst(CLSID_DxcLibrary, __uuidof(IDxcLibrary), reinterpret_cast<LPVOID*>(&DL)));
 		COM_PTR<IDxcBlobEncoding> DBE;
-		VERIFY_SUCCEEDED(DL->CreateBlobFromFile(ShaderPath, nullptr, &DBE));
+		VERIFY_SUCCEEDED(DL->CreateBlobFromFile(ShaderPath, nullptr, COM_PTR_PUT(DBE)));
 		COM_PTR<IDxcIncludeHandler> DIH;
-		VERIFY_SUCCEEDED(DL->CreateIncludeHandler(&DIH));
+		VERIFY_SUCCEEDED(DL->CreateIncludeHandler(COM_PTR_PUT(DIH)));
 		COM_PTR<IDxcCompiler> DC;
 		VERIFY_SUCCEEDED(DxcCreateInst(CLSID_DxcCompiler, __uuidof(IDxcCompiler), reinterpret_cast<LPVOID*>(&DC)));
 		COM_PTR<IDxcOperationResult> DOR;
-		VERIFY_SUCCEEDED(DC->Compile(DBE, nullptr, nullptr, Target, nullptr, 0, nullptr, 0, DIH, &DOR));
+		VERIFY_SUCCEEDED(DC->Compile(COM_PTR_GET(DBE), nullptr, nullptr, Target, nullptr, 0, nullptr, 0, COM_PTR_GET(DIH), COM_PTR_PUT(DOR)));
 		HRESULT HR; DOR->GetStatus(&HR); VERIFY_SUCCEEDED(HR);
 		VERIFY_SUCCEEDED(DOR->GetResult(reinterpret_cast<IDxcBlob**>(Blob)));
 
 		COM_PTR<IDxcBlobEncoding> DBEError;
-		VERIFY_SUCCEEDED(DOR->GetErrorBuffer(&DBEError));
+		VERIFY_SUCCEEDED(DOR->GetErrorBuffer(COM_PTR_PUT(DBEError)));
 		const auto Text = DBEError->GetBufferPointer();
 		if (nullptr != Text) {
 			//!< HasError

@@ -431,7 +431,7 @@ public:
 		case UnsignedShort: return DXGI_FORMAT_R16_UINT;
 		case UnsignedInt: return DXGI_FORMAT_R32_UINT;
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return DXGI_FORMAT_UNKNOWN;
 	}
 	static D3D12_PRIMITIVE_TOPOLOGY_TYPE ToDXPrimitiveTopologyType(const fx::gltf::Primitive::Mode MD) {
@@ -446,7 +446,7 @@ public:
 		case TriangleStrip:
 		case TriangleFan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 	}
 	static D3D12_PRIMITIVE_TOPOLOGY ToDXPrimitiveTopology(const fx::gltf::Primitive::Mode MD) {
@@ -461,7 +461,7 @@ public:
 		case TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 		//case TriangleFan:
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	}
 	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor& Acc) {
@@ -516,7 +516,7 @@ public:
 			//case Mat3:
 			//case Mat4:
 		}
-		DEBUG_BREAK();
+		BREAKPOINT();
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
