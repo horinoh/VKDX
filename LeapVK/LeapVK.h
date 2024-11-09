@@ -189,9 +189,9 @@ protected:
 		Leap::OnHand(Hand);
 		
 		const auto Index = eLeapHandType_Right == Hand.type ? 0 : 1;
-		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+		for (auto i = 0; i < std::size(Hand.digits); ++i) {
 			const auto& Digit = Hand.digits[i];
-			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+			for (auto j = 0; j < std::size(Digit.bones); ++j) {
 				const auto& Bone = Digit.bones[j];
 				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
 				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 300.0f) / 300.0f;
@@ -265,7 +265,7 @@ private:
 	{
 		//!< 16バイトアライン境界をまたいではいけないので vec3 ではなく、vec4 を使用する
 #ifdef USE_LEAP
-		std::array<std::array<std::array<glm::vec4, _countof(LEAP_DIGIT::bones)>, _countof(LEAP_HAND::digits)>, 2> Hands;
+		std::array<std::array<std::array<glm::vec4, std::size(LEAP_DIGIT::bones)>, std::size(LEAP_HAND::digits)>, 2> Hands;
 #else
 		std::array<std::array<std::array<glm::vec4, 4>, 5>, 2> Hands;
 #endif

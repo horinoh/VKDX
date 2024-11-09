@@ -14,7 +14,7 @@ public:
 	virtual ~ComputeVK() {}
 
 protected:
-	virtual void CreateSwapchain() override { VK::CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
+	virtual bool CreateSwapchain() override { return VK::CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override { 
 		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };

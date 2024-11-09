@@ -647,6 +647,8 @@ public:
 		LOG_OK();
 	}
 
+	virtual void DestroySwapchain();
+	virtual bool ReCreateSwapchain();
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void GetSwapChainResource();
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);

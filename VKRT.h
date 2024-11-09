@@ -49,10 +49,13 @@ protected:
 			Super::CreateDevice(hWnd, hInstance);
 		}
 	}
-	virtual void CreateSwapchain() override {
+	virtual bool CreateSwapchain() override {
 		//!< 最後にコピーするため VK_IMAGE_USAGE_TRANSFER_DST_BIT が必要
-		VK::CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-		VK::GetSwapchainImages();
+		if (VK::CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+			VK::GetSwapchainImages();
+			return false;
+		}
+		return false;
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(SelectedPhysDevice.first)) { return; }

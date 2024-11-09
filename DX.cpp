@@ -568,6 +568,15 @@ void DX::CreateCommandQueue()
 	LOG_OK();
 }
 
+void DX::DestroySwapchain() 
+{
+	//!< #TODO
+}
+bool DX::ReCreateSwapchain() 
+{
+	//!< #TODO
+	return false;
+}
 void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
 	constexpr UINT BufferCount = 3;
@@ -1306,11 +1315,11 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 	};
 
 	//!< レンダーターゲット数分だけ必要なもの
-	VERIFY(size(RTBDs) <= _countof(GPSD.BlendState.RenderTarget));
+	VERIFY(size(RTBDs) <= std::size(GPSD.BlendState.RenderTarget));
 	std::ranges::copy(RTBDs, GPSD.BlendState.RenderTarget);
 	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
 	VERIFY((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets));
-	VERIFY(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats));
+	VERIFY(GPSD.NumRenderTargets <= std::size(GPSD.RTVFormats));
 	std::ranges::copy(RTVFormats, GPSD.RTVFormats);
 
 	VERIFY((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH));
@@ -1365,10 +1374,10 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 #endif
 		.ViewInstancingDesc = D3D12_VIEW_INSTANCING_DESC({.ViewInstanceCount = 0, .pViewInstanceLocations = nullptr, .Flags = D3D12_VIEW_INSTANCING_FLAG_NONE }),
 	};
-	VERIFY(size(RTBDs) <= _countof(PMSS.BlendState.Value.RenderTarget));
+	VERIFY(size(RTBDs) <= std::size(PMSS.BlendState.Value.RenderTarget));
 	std::ranges::copy(RTBDs, PMSS.BlendState.Value.RenderTarget);
 	VERIFY((false == PMSS.BlendState.Value.IndependentBlendEnable || size(RTBDs) == PMSS.RTVFormats.Value.NumRenderTargets));
-	VERIFY(PMSS.RTVFormats.Value.NumRenderTargets <= _countof(PMSS.RTVFormats.Value.RTFormats));
+	VERIFY(PMSS.RTVFormats.Value.NumRenderTargets <= std::size(PMSS.RTVFormats.Value.RTFormats));
 	std::ranges::copy(RTVFormats, PMSS.RTVFormats.Value.RTFormats);
 	
 	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(PMSS), .pPipelineStateSubobjectStream = reinterpret_cast<void*>(&PMSS) };

@@ -314,7 +314,7 @@ void GltfVK::PreProcess()
 	const std::array DUTEs = {
 		VkDescriptorUpdateTemplateEntry({
 			0, 0,
-			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			std::size(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
 		})
 	};

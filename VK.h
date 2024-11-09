@@ -1047,14 +1047,22 @@ protected:
 
 	[[nodiscard]] virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	[[nodiscard]] virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
+	
+	virtual void DestroySwapchain();
+	virtual bool ReCreateSwapchain();
+	virtual bool CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
 	virtual void GetSwapchainImages();
-	virtual void CreateSwapchain() {
-		CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight()); 
-		GetSwapchainImages();
+	virtual bool CreateSwapchain() {
+		if (CreateSwapchain(SelectedPhysDevice.first, Surface, GetClientRectWidth(), GetClientRectHeight())) {
+			GetSwapchainImages();
+			return true;
+		}
+		return false;
 	}
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 
+	void DestroyViewports() { Viewports.clear(); ScissorRects.clear(); }
+	virtual void CreateViewports() { CreateViewport(Swapchain.Extent); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewport(const VkExtent2D& Extent, const float MinDepth = 0.0f, const float MaxDepth = 1.0f) { 
 		CreateViewport(static_cast<const float>(Extent.width), static_cast<const float>(Extent.height), MinDepth, MaxDepth); 
@@ -1281,6 +1289,11 @@ protected:
 
 	virtual void PopulateSecondaryCommandBuffer([[maybe_unused]] const size_t i) {}
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
+	virtual void PopulateCommandBuffer() {
+		for (auto i = 0; i < static_cast<int>(std::size(Swapchain.ImageAndViews)); ++i) {
+			PopulateCommandBuffer(i);
+		}
+	}
 
 	virtual uint32_t GetCurrentBackBufferIndex() const { return Swapchain.Index; }
 
@@ -1289,6 +1302,19 @@ protected:
 	virtual void SubmitGraphics(const uint32_t i);
 	virtual void SubmitCompute(const uint32_t i);
 	virtual void Present();
+
+	//virtual void Render() {
+	//	if (ReCreateSwapchain()) {
+	//		WaitFence();
+	//		if (AcquireNextImage()) {
+	//			OnUpdate();
+	//			Submit();
+	//			if (Present()) {
+	//			}
+	//		}
+	//		++FrameCount;
+	//	}
+	//}
 
 	virtual void Draw();
 	virtual void Dispatch();

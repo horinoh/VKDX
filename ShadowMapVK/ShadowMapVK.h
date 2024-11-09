@@ -469,7 +469,7 @@ protected:
 #ifndef USE_SHADOWMAP_VISUALIZE
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo_1::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = std::size(DescriptorUpdateInfo_1::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.offset = offsetof(DescriptorUpdateInfo_1, DBI), .stride = sizeof(DescriptorUpdateInfo_1)
 			}),
 #endif

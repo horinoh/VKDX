@@ -194,10 +194,10 @@ protected:
 		Palm.width; //float
 
 		//!< Žw[5] (thumb, index, middle, ring, pinky)
-		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+		for (auto i = 0; i < std::size(Hand.digits); ++i) {
 			const auto& Digit = Hand.digits[i];
 			//!< ŠÖß[4] (metacarpal, proximal, intermediate, distal)
-			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+			for (auto j = 0; j < std::size(Digit.bones); ++j) {
 				const auto & Bone = Digit.bones[j];
 				Bone.prev_joint; //LEAP_VECTOR
 				Bone.next_joint; //LEAP_VECTOR
@@ -219,7 +219,7 @@ protected:
 			CurrentMatrixVersion = MatrixVersion;
 			OnMatrixVersionChanged(IE);
 		}
-		for (uint32_t i = 0; i < _countof(IE->image); ++i) {
+		for (uint32_t i = 0; i < std::size(IE->image); ++i) {
 			if (!empty(ImageData[i])) {
 				std::copy(reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset, reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset + size(ImageData[i]), data(ImageData[i]));
 			}
@@ -240,7 +240,7 @@ protected:
 		}
 	}
 	virtual void OnMatrixVersionChanged(const LEAP_IMAGE_EVENT* IE) {
-		for (auto i = 0; i < _countof(IE->image); ++i) {
+		for (auto i = 0; i < std::size(IE->image); ++i) {
 			ImageProperties[i] = IE->image[i].properties;
 
 			if (empty(ImageData[i])) {
