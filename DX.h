@@ -657,6 +657,7 @@ public:
 
 	void CreateDirectCommandList(const UINT Count);
 	virtual void CreateDirectCommandList() {
+		//!< スワップチェイン数だけ確保する (デフォルト挙動)
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain.DxSwapChain->GetDesc1(&SCD);
 		CreateDirectCommandList(SCD.BufferCount);
@@ -787,10 +788,10 @@ protected:
 	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
 
-	COM_PTR<IDXGIFactory4> Factory;
-	COM_PTR<IDXGIAdapter> Adapter;
+	COM_PTR<IDXGIFactory7> Factory;
+	COM_PTR<IDXGIAdapter1> Adapter;
 	COM_PTR<IDXGIOutput> Output;
-	COM_PTR<ID3D12Device> Device;
+	COM_PTR<ID3D12Device5> Device;
 
 	COM_PTR<ID3D12CommandQueue> GraphicsCommandQueue;
 	COM_PTR<ID3D12CommandQueue> ComputeCommandQueue;
@@ -886,13 +887,18 @@ static std::ostream& operator<<(std::ostream& lhs, IDXGIOutput* rhs) {
 	}
 	return lhs;
 }
-static std::ostream& operator<<(std::ostream& lhs, IDXGIAdapter* rhs) {
-	DXGI_ADAPTER_DESC AD;
-	VERIFY_SUCCEEDED(rhs->GetDesc(&AD));
+static std::ostream& operator<<(std::ostream& lhs, IDXGIAdapter1* rhs) {
+	DXGI_ADAPTER_DESC1 AD;
+	VERIFY_SUCCEEDED(rhs->GetDesc1(&AD));
 	Win::Logf(TEXT("\t%s\n"), AD.Description);
+	Win::Logf(TEXT("\t\tVendorId = %d, DeviceId = %d, SubSysId = %d, Revision = %d\n"), AD.VendorId, AD.DeviceId, AD.SubSysId, AD.Revision);
 	Win::Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AD.DedicatedVideoMemory);
 	Win::Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AD.DedicatedSystemMemory);
 	Win::Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AD.SharedSystemMemory);
+	Win::Logf(TEXT("\t\tAdapterLuid.LowPart = %d, HighPart = %d\n"), AD.AdapterLuid.LowPart, AD.AdapterLuid.HighPart);
+	Win::Logf(TEXT("\t\tFlags = %s %s\n"), 
+		(AD.Flags & DXGI_ADAPTER_FLAG_REMOTE) ? "REMOTE" : "", 
+		(AD.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? "SOFTWARE" : "");
 
 	Win::Log("\t\t[ Outputs ]\n");
 	COM_PTR<IDXGIOutput> DO;
@@ -904,8 +910,8 @@ static std::ostream& operator<<(std::ostream& lhs, IDXGIAdapter* rhs) {
 }
 static std::ostream& operator<<(std::ostream& lhs, IDXGIFactory4* rhs) {
 	Win::Log("[ Aadapters ]\n");
-	COM_PTR<IDXGIAdapter> DA;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != rhs->EnumAdapters(i, COM_PTR_PUT(DA)); ++i) {
+	COM_PTR<IDXGIAdapter1> DA;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != rhs->EnumAdapters1(i, COM_PTR_PUT(DA)); ++i) {
 		std::cout << COM_PTR_GET(DA);
 		COM_PTR_RESET(DA);
 	}

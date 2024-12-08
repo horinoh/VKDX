@@ -22,8 +22,8 @@ public:
 	virtual ~RenderTargetVK() {}
 
 protected:
-	virtual void AllocateCommandBuffer() override {
-		Super::AllocateCommandBuffer();
+	virtual void CreateCommandBuffer() override {
+		Super::CreateCommandBuffer();
 
 #pragma region PASS1
 		const auto SCP = SecondaryCommandPools[0];

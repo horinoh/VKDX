@@ -379,15 +379,18 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(COM_PTR_UUIDOF_PUTVOID(Debug)));
 	Debug->EnableDebugLayer();
 
-	//!< GPUバリデーション ... CPUバリデーションが効かなくなるので採用しない…
-	//COM_PTR<ID3D12Debug1> Debug1;
-	//VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
-	//Debug1->SetEnableGPUBasedValidation(true);
+	//!< GPUバリデーション (GPU validation)
+	COM_PTR<ID3D12Debug3> Debug3;
+	COM_PTR_AS(Debug, Debug3)
+	if (Debug3) {
+		Debug3->SetEnableGPUBasedValidation(TRUE); 
+	}
 
-	//!< CreateDXGIFactory2()では引数にフラグを取ることができるので DXGI_CREATE_FACTORY_DEBUG フラグを指定 (CreateDXGIFactory2() can specify flag argument, here use DXGI_CREATE_FACTORY_DEBUG)
+	//!< CreateDXGIFactory2() では引数にフラグを取ることができる (CreateDXGIFactory2() can specify flag argument)
 	VERIFY_SUCCEEDED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, COM_PTR_UUIDOF_PUTVOID(Factory)));
 #else
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
+	//VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
+	VERIFY_SUCCEEDED(CreateDXGIFactory2(0, COM_PTR_UUIDOF_PUTVOID(Factory)));
 #endif
 
 #ifdef DEBUG_STDOUT
@@ -399,16 +402,21 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//!< ソフトウエアラスタライザ (Software rasterizer)
 	VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
 #else
-	std::vector<DXGI_ADAPTER_DESC> ADs;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
-		VERIFY_SUCCEEDED(Adapter->GetDesc(&ADs.emplace_back()));
+	//!< アダプター (GPU) の列挙 (Enumerate adapters(GPU))
+	std::vector<DXGI_ADAPTER_DESC1> ADs;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, COM_PTR_PUT(Adapter)); ++i) {
+		VERIFY_SUCCEEDED(Adapter->GetDesc1(&ADs.emplace_back()));
+		if (ADs.back().Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {}
 		COM_PTR_RESET(Adapter);
 	}
-	//!< アダプター(GPU)の選択、ここでは最大メモリを選択することにする (Here, select max memory size adapter(GPU))
-	VERIFY_SUCCEEDED(Factory->EnumAdapters(static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) {
-		return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory;
-	}))),
-		COM_PTR_PUT(Adapter)));
+	//!< アダプターの選択、ここでは最大メモリを選択することにする (Here, select max memory size adapter)
+	const auto Index = static_cast<UINT>(std::distance(std::begin(ADs),
+		std::ranges::max_element(ADs,
+			[](const DXGI_ADAPTER_DESC1& lhs, const DXGI_ADAPTER_DESC1& rhs) {
+				return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory;
+			})
+	));
+	VERIFY_SUCCEEDED(Factory->EnumAdapters1(Index, COM_PTR_PUT(Adapter)));
 #endif
 	VERIFY(nullptr != Adapter);
 	Log("[ Selected Adapter ]\n");
@@ -418,8 +426,8 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 
 	//!< ここでは最初に見つかったアウトプット(Display)を選択することにする (Here, select first found output(Display))
 	{
-		COM_PTR<IDXGIAdapter> DA;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(DA)); ++i) {
+		COM_PTR<IDXGIAdapter1> DA;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, COM_PTR_PUT(DA)); ++i) {
 			for (UINT j = 0; DXGI_ERROR_NOT_FOUND != DA->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
 				if (nullptr != Output) { break; }
 				COM_PTR_RESET(Output);
@@ -552,7 +560,7 @@ void DX::CreateCommandQueue()
 			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
 			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-			.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+			.NodeMask = 0 //!< マルチGPUの場合に使用 (1つしか使わない場合は0で良い)
 		};
 		VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CQD, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandQueue)));
 	}
@@ -786,7 +794,8 @@ void DX::ResizeDepthStencil([[maybe_unused]] const DXGI_FORMAT DepthFormat, [[ma
 
 void DX::CreateDirectCommandList(const UINT Count)
 {
-	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
+	//!< コマンド実行 GCL->ExecuteCommandList() 後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット CA->Reset() してはいけない
+	//!< (アロケータが覚えているのでコマンドのリセット GCL->Reset() は可能)
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
 
 	const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);

@@ -1032,6 +1032,7 @@ protected:
 
 	virtual void AllocatePrimaryCommandBuffer(const size_t Count);
 	void AllocatePrimaryCommandBuffer() {
+		//!< スワップチェイン数だけ確保する (デフォルト挙動)
 		AllocatePrimaryCommandBuffer(std::size(Swapchain.ImageAndViews));
 	}
 	void AllocateSecondaryCommandBuffer(const size_t Count);
@@ -1039,7 +1040,7 @@ protected:
 		AllocateSecondaryCommandBuffer(std::size(Swapchain.ImageAndViews));
 	}
 	virtual void AllocateComputeCommandBuffer();
-	virtual void AllocateCommandBuffer() {
+	virtual void CreateCommandBuffer() {
 		AllocatePrimaryCommandBuffer();
 		AllocateSecondaryCommandBuffer();
 		AllocateComputeCommandBuffer();

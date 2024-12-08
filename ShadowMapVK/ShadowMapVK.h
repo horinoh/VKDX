@@ -22,8 +22,8 @@ protected:
 		CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
-	virtual void AllocateCommandBuffer() override {
-		Super::AllocateCommandBuffer();
+	virtual void CreateCommandBuffer() override {
+		Super::CreateCommandBuffer();
 
 #pragma region PASS1
 		//!< パス1 : セカンダリコマンドバッファ

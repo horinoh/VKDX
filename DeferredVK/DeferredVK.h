@@ -25,8 +25,8 @@ protected:
 		CopyToHostVisibleDeviceMemory(Device, UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
-	virtual void AllocateCommandBuffer() override {
-		Super::AllocateCommandBuffer();
+	virtual void CreateCommandBuffer() override {
+		Super::CreateCommandBuffer();
 #pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(std::size(Swapchain.ImageAndViews));
 #pragma region PASS1 (Draw fullscreen)

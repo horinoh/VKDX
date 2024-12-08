@@ -18,7 +18,7 @@ protected:
 		const auto& CB = CommandBuffers[0];
 		const auto& PDMP = SelectedPhysDevice.second.PDMP;
 
-#if 1
+#if true
 		const std::array Vertices = {
 	#ifdef USE_VIEWPORT_Y_UP
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
@@ -39,7 +39,6 @@ protected:
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-//		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
 
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
