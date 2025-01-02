@@ -383,7 +383,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	COM_PTR<ID3D12Debug3> Debug3;
 	COM_PTR_AS(Debug, Debug3)
 	if (Debug3) {
-		Debug3->SetEnableGPUBasedValidation(TRUE); 
+		//Debug3->SetEnableGPUBasedValidation(TRUE); 
 	}
 
 	//!< CreateDXGIFactory2() では引数にフラグを取ることができる (CreateDXGIFactory2() can specify flag argument)
@@ -614,34 +614,33 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.SampleDesc = SDs[0],
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = BufferCount,
-		.Scaling = DXGI_SCALING_STRETCH/*DXGI_SCALING_NONE*/,
+		.Scaling = DXGI_SCALING_STRETCH,
 		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
 		.Flags = 0/*DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING*/,
 	});
-	//const DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
-	//	.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
-	//	.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-	//	.Scaling = DXGI_MODE_SCALING_UNSPECIFIED,
-	//	.Windowed = FALSE,
-	//};
-	COM_PTR_RESET(SwapChain);
+	constexpr DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
+		.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
+		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED,
+		.Windowed = FALSE,
+	};
+	COM_PTR_RESET(SwapChain.DxSwapChain);
 	COM_PTR<IDXGISwapChain1> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD, /*&SCFD*/nullptr, /*COM_PTR_GET(Output)*/nullptr, COM_PTR_PUT(NewSwapChain)));
+	COM_PTR_AS(NewSwapChain, SwapChain.DxSwapChain);
 
-	//!< DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING 時は、Alt + Enter によるフルスクリーン切替えを抑制、SwapChain->SetFullscreenState() を使用する
-	if (SCD.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
-		Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
-	}
+	//!< Alt + Enter によるフルスクリーン切替えを抑制 (フルスクリーン変更対応が必要となり、手間がかかる)
+	Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
 
 	//!< フルスクリーン切替え(トグル)の例
 	if(false){
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD1);
+		DXGI_SWAP_CHAIN_DESC1 SCD1;
+		SwapChain.DxSwapChain->GetDesc1(&SCD1);
 		if (!(SCD.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)) {
 			BOOL IsFullScreen;
-			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(&IsFullScreen));
-			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(!IsFullScreen, nullptr));
+			VERIFY_SUCCEEDED(SwapChain.DxSwapChain->GetFullscreenState(&IsFullScreen, nullptr));
+			VERIFY_SUCCEEDED(SwapChain.DxSwapChain->SetFullscreenState(!IsFullScreen, nullptr));
 		}
 	}
 #else
@@ -659,7 +658,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.BufferCount = BufferCount,
 		.OutputWindow = hWnd,
 		.Windowed = TRUE,
-		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD, //!< バックバッファ内容は破棄 (毎フレーム描画)
 		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	});
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
@@ -735,10 +734,10 @@ void DX::GetSwapChainResource()
 	auto CDH = SwapChain.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChain.DescriptorHeap->GetDesc().Type);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		auto& RAH = SwapChain.ResourceAndHandles.emplace_back();
+		auto& RAHs = SwapChain.ResourceAndHandles.emplace_back();
 
 		//!< スワップチェインのバッファリソースを取得
-		VERIFY_SUCCEEDED(SwapChain.DxSwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(RAH.first)));
+		VERIFY_SUCCEEDED(SwapChain.DxSwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(RAHs.first)));
 
 		//!< デスクリプタ(ビュー)の作成
 #ifdef USE_GAMMA_CORRECTION
@@ -750,9 +749,9 @@ void DX::GetSwapChainResource()
 		Device->CreateRenderTargetView(COM_PTR_GET(RAH.first), &RTVD, CDH);
 #else
 		//!< タイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能
-		Device->CreateRenderTargetView(COM_PTR_GET(RAH.first), nullptr, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(RAHs.first), nullptr, CDH);
 #endif
-		RAH.second = CDH;
+		RAHs.second = CDH;
 		CDH.ptr += IncSize;
 	}
 
