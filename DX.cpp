@@ -100,8 +100,8 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 		Super::OnExitSizeMove(hWnd, hInstance);
 
-		//!< コマンドリストの完了を待つ
-		WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
+		//!< GPU の完了を待つ
+		WaitForGPU();
 
 		const auto W = GetClientRectWidth(), H = GetClientRectHeight();
 
@@ -123,7 +123,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 		//!< ビューポートサイズが決定してから
 		LoadScene();
-		for (auto i = 0; i < size(DirectCommandLists); ++i) {
+		for (auto i = 0; i < std::size(DirectCommandLists); ++i) {
 			PopulateBundleCommandList(i);
 			PopulateCommandList(i);
 		}
@@ -141,7 +141,7 @@ void DX::OnPreDestroy()
 	}
 
 	//!< GPUが完了するまでここで待機 (Wait GPU)
-	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
+	WaitForGPU();
 }
 
 const char* DX::GetFormatChar(const DXGI_FORMAT Format)
@@ -205,7 +205,7 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, c
 
 	BYTE* Data;
 	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		for (auto i = 0; i < size(PSFs); ++i) {
+		for (auto i = 0; i < std::size(PSFs); ++i) {
 			const auto NR = NumRows[i];
 			const auto RSIB = RowSizeInBytes[i];
 			const D3D12_MEMCPY_DEST MCD = {
@@ -339,7 +339,7 @@ void DX::PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* GCL, ID3D12
 {
 	//!< LoadDDSTextureFromFile() を使用すると D3D12_RESOURCE_STATE_COPY_DEST で作成されているのでバリアの必要は無い (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
 	
-	for (UINT i = 0; i < size(PSFs); ++i) {
+	for (UINT i = 0; i < std::size(PSFs); ++i) {
 		const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 			.pResource = Dst,
 			.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
@@ -359,7 +359,7 @@ void DX::PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* GCL, ID3D12
 void DX::ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence)
 {
 	const std::array CLs = { CL };
-	CQ->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+	CQ->ExecuteCommandLists(static_cast<UINT>(std::size(CLs)), std::data(CLs));
 
 	WaitForFence(CQ, Fence);
 }
@@ -470,7 +470,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 		for (const auto i : FeatureLevels) {
 			if (SUCCEEDED(D3D12CreateDevice(COM_PTR_GET(Adapter), i, COM_PTR_UUIDOF_PUTVOID(Device)))) {
 				//!< NumFeatureLevels, pFeatureLevelsRequested は入力、MaxSupportedFeatureLevel は出力となる (NumFeatureLevels, pFeatureLevelsRequested is input, MaxSupportedFeatureLevel is output)
-				D3D12_FEATURE_DATA_FEATURE_LEVELS FDFL = { .NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) };
+				D3D12_FEATURE_DATA_FEATURE_LEVELS FDFL = { .NumFeatureLevels = static_cast<UINT>(std::size(FeatureLevels)), .pFeatureLevelsRequested = std::data(FeatureLevels) };
 				VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&FDFL), sizeof(FDFL)));
 				Log("MaxSupportedFeatureLevel\n");
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
@@ -793,8 +793,8 @@ void DX::ResizeDepthStencil([[maybe_unused]] const DXGI_FORMAT DepthFormat, [[ma
 
 void DX::CreateDirectCommandList(const UINT Count)
 {
-	//!< コマンド実行 GCL->ExecuteCommandList() 後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット CA->Reset() してはいけない
-	//!< (アロケータが覚えているのでコマンドのリセット GCL->Reset() は可能)
+	//!< コマンド実行 CommandList->ExecuteCommandList() 後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット CommandAllocator->Reset() してはいけない
+	//!< (アロケータが覚えているのでコマンドのリセット CommandList->Reset() は可能)
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
 
 	const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
@@ -907,8 +907,8 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 
 	COM_PTR<ID3DBlob> ErrorBlob;
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
-		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
-		.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
+		.NumParameters = static_cast<UINT>(std::size(RPs)), .pParameters = std::data(RPs),
+		.NumStaticSamplers = static_cast<UINT>(std::size(SSDs)), .pStaticSamplers = std::data(SSDs),
 		.Flags = Flags
 	}; 
 #if 1
@@ -935,8 +935,8 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 	
 	COM_PTR<ID3DBlob> ErrorBlob;
 	const D3D12_ROOT_SIGNATURE_DESC1 RSD = {
-		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
-		.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
+		.NumParameters = static_cast<UINT>(std::size(RPs)), .pParameters = std::data(RPs),
+		.NumStaticSamplers = static_cast<UINT>(std::size(SSDs)), .pStaticSamplers = std::data(SSDs),
 		.Flags = Flags
 	};
 	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = RSD, };
@@ -981,7 +981,7 @@ void DX::CreateVideo()
 		std::vector<GUID> Profiles(FDVDPC.ProfileCount);
 		auto FDVDP = D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES({
 			.NodeIndex = 0,
-			.ProfileCount = static_cast<UINT>(size(Profiles)),
+			.ProfileCount = static_cast<UINT>(std::size(Profiles)),
 			.pProfiles = data(Profiles)
 		});
 		VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, reinterpret_cast<void*>(&FDVDP), sizeof(FDVDP)));
@@ -1001,7 +1001,7 @@ void DX::CreateVideo()
 				D3D12_FEATURE_DATA_VIDEO_DECODE_FORMATS FDVDF = {
 					.NodeIndex = 0,
 					.Configuration = Configration,
-					.FormatCount = static_cast<UINT>(size(Formats)),
+					.FormatCount = static_cast<UINT>(std::size(Formats)),
 					.pOutputFormats = data(Formats),
 				};
 				VERIFY_SUCCEEDED(VideoDevice->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMATS, reinterpret_cast<void*>(&FDVDF), sizeof(FDVDF)));
@@ -1178,7 +1178,7 @@ void DX::SetBlobPart(COM_PTR<ID3DBlob>& Blob)
 		std::ranges::copy(Name, begin(Buf));
 
 		COM_PTR<ID3DBlob> NewBlob;
-		if (SUCCEEDED(D3DSetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, data(Buf), size(Buf), COM_PTR_PUT(NewBlob)))) {
+		if (SUCCEEDED(D3DSetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, std::data(Buf), std::size(Buf), COM_PTR_PUT(NewBlob)))) {
 			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
@@ -1306,10 +1306,10 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
 	 	.RasterizerState = RD,
 		.DepthStencilState = DSD,
-		.InputLayout = D3D12_INPUT_LAYOUT_DESC({ .pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(size(IEDs)) }),
+		.InputLayout = D3D12_INPUT_LAYOUT_DESC({ .pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(std::size(IEDs)) }),
 		.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		.PrimitiveTopologyType = PTT,
-		.NumRenderTargets = static_cast<UINT>(size(RTVFormats)), .RTVFormats = {},
+		.NumRenderTargets = static_cast<UINT>(std::size(RTVFormats)), .RTVFormats = {},
 		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
@@ -1323,10 +1323,10 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 	};
 
 	//!< レンダーターゲット数分だけ必要なもの
-	VERIFY(size(RTBDs) <= std::size(GPSD.BlendState.RenderTarget));
+	VERIFY(std::size(RTBDs) <= std::size(GPSD.BlendState.RenderTarget));
 	std::ranges::copy(RTBDs, GPSD.BlendState.RenderTarget);
 	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
-	VERIFY((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets));
+	VERIFY((false == GPSD.BlendState.IndependentBlendEnable || std::size(RTBDs) == GPSD.NumRenderTargets));
 	VERIFY(GPSD.NumRenderTargets <= std::size(GPSD.RTVFormats));
 	std::ranges::copy(RTVFormats, GPSD.RTVFormats);
 
@@ -1370,7 +1370,7 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
 		.RasterizerState = RD,
 		.DepthStencilState = DSD,
-		.RTVFormats = D3D12_RT_FORMAT_ARRAY({.RTFormats = {}, .NumRenderTargets = static_cast<UINT>(size(RTVFormats)) }),
+		.RTVFormats = D3D12_RT_FORMAT_ARRAY({.RTFormats = {}, .NumRenderTargets = static_cast<UINT>(std::size(RTVFormats)) }),
 		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0,
@@ -1382,9 +1382,9 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 #endif
 		.ViewInstancingDesc = D3D12_VIEW_INSTANCING_DESC({.ViewInstanceCount = 0, .pViewInstanceLocations = nullptr, .Flags = D3D12_VIEW_INSTANCING_FLAG_NONE }),
 	};
-	VERIFY(size(RTBDs) <= std::size(PMSS.BlendState.Value.RenderTarget));
+	VERIFY(std::size(RTBDs) <= std::size(PMSS.BlendState.Value.RenderTarget));
 	std::ranges::copy(RTBDs, PMSS.BlendState.Value.RenderTarget);
-	VERIFY((false == PMSS.BlendState.Value.IndependentBlendEnable || size(RTBDs) == PMSS.RTVFormats.Value.NumRenderTargets));
+	VERIFY((false == PMSS.BlendState.Value.IndependentBlendEnable || std::size(RTBDs) == PMSS.RTVFormats.Value.NumRenderTargets));
 	VERIFY(PMSS.RTVFormats.Value.NumRenderTargets <= std::size(PMSS.RTVFormats.Value.RTFormats));
 	std::ranges::copy(RTVFormats, PMSS.RTVFormats.Value.RTFormats);
 	
@@ -1409,7 +1409,7 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 //!< UINT32 -> A8B8R8G8
 void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS)
 {
-	Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(size(Colors)), DXGI_FORMAT_R8G8B8A8_UNORM);
+	Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(std::size(Colors)), DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
@@ -1420,21 +1420,21 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		{
 			//!< アラインされたサイズを計算 (Calculate aligned size)
 			size_t AlignedSize = 0;
-			for (UINT32 i = 0; i < size(Colors); ++i) {
+			for (UINT32 i = 0; i < std::size(Colors); ++i) {
 				AlignedSize = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 				AlignedSize += LayerSize;
 			}
 			//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
 			std::vector AlignedData(AlignedSize, std::byte());
-			for (UINT32 i = 0; i < size(Colors); ++i) {
+			for (UINT32 i = 0; i < std::size(Colors); ++i) {
 				*reinterpret_cast<UINT32*>(&AlignedData[RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)]) = Colors[i];
 			}
-			Upload.Create(COM_PTR_GET(Device), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD, data(AlignedData));
+			Upload.Create(COM_PTR_GET(Device), std::size(AlignedData), D3D12_HEAP_TYPE_UPLOAD, std::data(AlignedData));
 		}
 
 		const auto RD = Textures.back().Resource->GetDesc();
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
-		for (UINT32 i = 0; i < size(Colors); ++i) {
+		for (UINT32 i = 0; i < std::size(Colors); ++i) {
 			PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
 				.Offset = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT),
 				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
@@ -1449,36 +1449,59 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
 {
 	auto Value = Fence->GetCompletedValue();
+	//!< インクリメントされた値
 	++Value;
-	//!< GPUが到達すれば Value になる
+
+	//!< GPU が到達すれば、フェンスをシグナル状態にし、インクリメントされた値へ更新
 	VERIFY_SUCCEEDED(CQ->Signal(Fence, Value));
 	if (Fence->GetCompletedValue() < Value) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 		if (nullptr != hEvent) [[likely]] {
-			//!< GetCompletedValue() が FenceValue になったらイベントが発行されるようにする
+			//!< CPU はインクリメントされた値になったらイベントが発行されるようにしておく
 			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, hEvent));
-			//!< イベント発行まで待つ
+			//!< CPU はイベント発行まで待つ
 			WaitForSingleObject(hEvent, INFINITE);
 			CloseHandle(hEvent);
 		}
 	}
 }
+void DX::WaitForGPU()
+{
+	//!< 任意の場所で使うよう、既存のフェンスとは別に用意する
+	COM_PTR< ID3D12Fence> Fence;
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(Fence)));
+
+	constexpr UINT64 Value = 1;
+	VERIFY_SUCCEEDED(GraphicsCommandQueue->Signal(COM_PTR_GET(Fence), Value));
+
+	auto hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	Fence->SetEventOnCompletion(Value, hEvent);
+
+	WaitForSingleObjectEx(hEvent, INFINITE, FALSE);
+	CloseHandle(hEvent);
+}
+
 void DX::SubmitGraphics(const UINT i)
 {
 	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(DirectCommandLists[i])) };
-	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(std::size(CLs)), std::data(CLs));
 }
 void DX::SubmitCompute(const UINT i)
 {
 	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(ComputeCommandLists[i])) };
-	ComputeCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+	ComputeCommandQueue->ExecuteCommandLists(static_cast<UINT>(std::size(CLs)), std::data(CLs));
 }
 void DX::Present()
 {
-	VERIFY_SUCCEEDED(SwapChain.DxSwapChain->Present(1/*垂直同期を待つ*/, 0));
+	//constexpr UINT SyncInterval = 0; //!< 垂直同期を待たない	(ティアリング発生) (Not wait sync)
+	constexpr UINT SyncInterval = 1; //!< 垂直同期を待つ (Wait sync)
+	
+	//!< Present() コールでバックバッファのインデックスが更新される
+	VERIFY_SUCCEEDED(SwapChain.DxSwapChain->Present(SyncInterval, 0));
 }
 void DX::Draw()
 {
+	//!< CPU と GPU の同期 (Synchronization between cpu and gpu)
 	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
 	//!< コンスタントバッファの更新等

@@ -123,7 +123,7 @@ Device->Evict(static_cast<UINT>(size(Pageables)), data(Pageables));
 
 /**
 CommandList、CommandAllocator はスレッドセーフではないので各スレッド毎に持つ必要がある
-CommandQueue はスレッドフリーで各スレッドから使用可能
+CommandQueue はスレッドセーフで各スレッドから使用可能
 */
 
 class DX : public Cmn, public Win
@@ -774,6 +774,7 @@ public:
 	
 	virtual void OnUpdate([[maybe_unused]] const UINT i) {}
 	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
+	void WaitForGPU();
 	virtual void SubmitGraphics(const UINT i);
 	virtual void SubmitCompute(const UINT i);
 	virtual void Present();

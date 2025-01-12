@@ -6,10 +6,10 @@
   <ItemDefinitionGroup>
     <FxCompile>
       <ShaderModel>6.6</ShaderModel>
-      <ObjectFileOutput>$(ProjectDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)%(RelativeDir)%(Filename).cso</ObjectFileOutput>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AssemblerOutput>AssemblyCode</AssemblerOutput>
-      <AssemblerOutputFile>$(ProjectDir)%(Filename).asm</AssemblerOutputFile>
+      <AssemblerOutputFile>$(ProjectDir)%(RelativeDir)%(Filename).asm</AssemblerOutputFile>
       <AdditionalOptions>-Qembed_debug</AdditionalOptions>
     </FxCompile>
     <PostBuildEvent>
