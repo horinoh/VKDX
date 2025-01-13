@@ -155,6 +155,7 @@
 		|IID_PPV_ARGS(XXX.GetAddressOf())|__uuidof(XXX), XXX.put_void()|
 		|IID_PPV_ARGS(XXX.ReleaseAndGetAddressOf())|XXX = nullptr; __uuidof(XXX), XXX.put_void()|
 
+<!--
 ### [DirectXTK](https://github.com/Microsoft/DirectXTK12)
 * DirectXTK_Desktop_20XX_Win10.sln を開いて x64 をビルド (Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要 (VisualStudioを更新する)
@@ -163,6 +164,10 @@
 		~~~
 		ignore = dirty
 		~~~
+-->
+### [DirectXTK]
+- NuGet で directxtk12_desktop_20XX をインストールする
+
 * 備考
 	* [DirectXTex](https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) もある
 

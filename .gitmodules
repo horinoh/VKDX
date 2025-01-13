@@ -6,10 +6,6 @@
 	path = gli
 	url = https://github.com/g-truc/gli.git
 	ignore = dirty
-[submodule "DirectXTK12"]
-	path = DirectXTK12
-	url = https://github.com/microsoft/DirectXTK12.git
-	ignore = dirty
 [submodule "fx-gltf"]
 	path = fx-gltf
 	url = https://github.com/jessey-git/fx-gltf.git

@@ -25,9 +25,9 @@ public:
 			bool IsCubeMap = false;
 			if (IsDDS(Path)) {
 				DirectX::DDS_ALPHA_MODE AlphaMode;
-				VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Dev, data(Path.wstring()), COM_PTR_PUT(Resource), Data, SRDs, 0, &AlphaMode, &IsCubeMap));
+				VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Dev, std::data(Path.wstring()), COM_PTR_PUT(Resource), Data, SRDs, 0, &AlphaMode, &IsCubeMap));
 			} else {
-				VERIFY_SUCCEEDED(DirectX::LoadWICTextureFromFile(Dev, data(Path.wstring()), COM_PTR_PUT(Resource), Data, SRDs.emplace_back(), 0));
+				VERIFY_SUCCEEDED(DirectX::LoadWICTextureFromFile(Dev, std::data(Path.wstring()), COM_PTR_PUT(Resource), Data, SRDs.emplace_back(), 0));
 			}
 			const auto RD = Resource->GetDesc();
 			SRV = IsCubeMap ? D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }) }) :
@@ -43,7 +43,7 @@ public:
 			std::vector<UINT64> RowSizeInBytes(std::size(SRDs));
 			UINT64 TotalBytes = 0;
 			const auto RD = Resource->GetDesc();
-			Dev->GetCopyableFootprints(&RD, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &TotalBytes);
+			Dev->GetCopyableFootprints(&RD, 0, static_cast<const UINT>(std::size(SRDs)), 0, std::data(PSFs), std::data(NumRows), std::data(RowSizeInBytes), &TotalBytes);
 			DX::CreateBufferResource(Upload, Dev, SRDs, PSFs, NumRows, RowSizeInBytes, TotalBytes);
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS, ID3D12Resource* Upload) {
@@ -67,7 +67,7 @@ public:
 	};
 
 	void SaveToFile(const RenderTexture& RT, std::wstring_view FileName) {
-		VERIFY_SUCCEEDED(DirectX::SaveDDSTextureToFile(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(RT.Resource), data(FileName), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		VERIFY_SUCCEEDED(DirectX::SaveDDSTextureToFile(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(RT.Resource), std::data(FileName), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	}
 
 protected:

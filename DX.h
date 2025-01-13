@@ -229,7 +229,7 @@ public:
 		IndirectBuffer& Create(ID3D12Device* Device, const size_t Size, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
 			Super::Create(Device, Size);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(Size), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(Size), .NumArgumentDescs = static_cast<const UINT>(std::size(IADs)), .pArgumentDescs = std::data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 			return *this;
 		}
@@ -511,10 +511,16 @@ public:
 #pragma endregion
 
 protected:
-	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL, 
+	//!< トランジションバリア
+	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL,
 		ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
 		const std::array RBs = {
 			D3D12_RESOURCE_BARRIER({
+				//!< 参考)
+				//!< D3D12_RESOURCE_BARRIER_TYPE_ALIASING
+				//!<	同時使用しないリソースに対し、同じメモリを割り当てているようなケースで競合を防ぐ
+				//!< D3D12_RESOURCE_BARRIER_TYPE_UAV
+				//!<	UAV に対して、読み書き競合を防ぐ (コンピュートシェーダでよく使われる)
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
 				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
@@ -524,8 +530,9 @@ protected:
 				})
 			})
 		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		GCL->ResourceBarrier(static_cast<UINT>(std::size(RBs)), std::data(RBs));
 	}
+	//!< トランジションバリア (２つ用)
 	static void ResourceBarrier2(ID3D12GraphicsCommandList* GCL,
 		ID3D12Resource* Resource0, const D3D12_RESOURCE_STATES Before0, const D3D12_RESOURCE_STATES After0,
 		ID3D12Resource* Resource1, const D3D12_RESOURCE_STATES Before1, const D3D12_RESOURCE_STATES After1) {
@@ -549,7 +556,7 @@ protected:
 				})
 			})
 		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		GCL->ResourceBarrier(static_cast<UINT>(std::size(RBs)), std::data(RBs));
 	}
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_RESOURCE_FLAGS RF, const D3D12_HEAP_TYPE HT, const D3D12_RESOURCE_STATES RS, const void* Source = nullptr);
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizeInBytes, const UINT64 TotalBytes);
