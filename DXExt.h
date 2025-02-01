@@ -111,16 +111,18 @@ protected:
 	virtual void CreateTexture() override {
 		CreateTexture_Depth();
 	}
-	//!< パイプラインステートを深度を有効にして作成すること
+
+	//!< [使用時] パイプラインステートを深度を有効にして作成すること ([On use] Enable depth on create pipeline state)
 	//virtual void CreatePipelineState() override {
 	//	CreatePipelineState_XXX(TRUE, ...);
 	//}
+
 	virtual void CreateDescriptor() override {
 		auto& Desc = DsvDescs.emplace_back();
 		auto& Heap = Desc.first;
 		auto& Handle = Desc.second;
 
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+		constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(Heap)));
 		
 		auto CDH = Heap->GetCPUDescriptorHandleForHeapStart();
@@ -131,7 +133,8 @@ protected:
 		Handle.emplace_back(CDH);
 		CDH.ptr += IncSize;
 	}
-	//!< 深度クリア、レンダーターゲットへの設定をすること
+
+	//!< [使用時] 深度クリア、レンダーターゲットへの設定をすること ([On use] Clear depth, and set to render target)
 	//virtual void PopulateCommandList(const size_t i) override {
 	//	const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
 	//	constexpr std::array<D3D12_RECT, 0> Rects = {};

@@ -220,14 +220,17 @@ protected:
 	virtual void CreateRenderPass() override { 
 		Super::CreateRenderPass_Depth(); 
 	}
-	//!< パイプラインを深度を有効にして作成すること
+
+	//!< [使用時] パイプラインを深度を有効にして作成すること ([On use] Enable depth and create pipeline)
 	//virtual void CreatePipeline() override {
 	//	CreatePipeline_XXX(..., VK_TRUE, ...);
 	//}
+
 	virtual void CreateFramebuffer() override {
 		CreateFrameBuffer_Depth();
 	}
-	//!< 深度クリアの設定をすること
+
+	//!< [使用時] 深度クリアの設定をすること ([On use] Set depth clear settings)
 	//virtual void PopulateCommandBuffer(const size_t i) override {
 	//	constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 	//}
