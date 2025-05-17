@@ -32,7 +32,7 @@ void AdjustScale(std::vector<DirectX::XMFLOAT3>& Vertices, const float Scale)
 
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
-	PERFORMANCE_COUNTER();
+	PERFORMANCE_COUNTER_FUNC();
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
@@ -96,7 +96,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	KillTimer(hWnd, IDT_TIMER1); {
 		OnPreDestroy();
 
-		PERFORMANCE_COUNTER();
+		PERFORMANCE_COUNTER_FUNC();
 
 		Super::OnExitSizeMove(hWnd, hInstance);
 
@@ -1276,7 +1276,7 @@ void DX::CreatePipelineStateVsPsDsHsGs(COM_PTR<ID3D12PipelineState>& PST,
 	const std::vector<DXGI_FORMAT>& RTVFormats,
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
-	PERFORMANCE_COUNTER();
+	PERFORMANCE_COUNTER_FUNC();
 
 	VERIFY((VS.pShaderBytecode != nullptr && VS.BytecodeLength));
 
@@ -1355,7 +1355,7 @@ void DX::CreatePipelineStateAsMsPs(COM_PTR<ID3D12PipelineState>& PST,
 	const std::vector<DXGI_FORMAT>& RTVFormats, 
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
-	PERFORMANCE_COUNTER();
+	PERFORMANCE_COUNTER_FUNC();
 
 	//!< キャッシュドパイプラインステート (CachedPipelineState)
 	COM_PTR<ID3DBlob> CachedBlob;

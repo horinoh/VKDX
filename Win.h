@@ -65,7 +65,7 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-//#include <format>
+#include <chrono>
 
 #include <codecvt>
 #include <charconv>
@@ -113,9 +113,9 @@
 #define LOG_OK() LogOK(std::source_location::current().function_name())
 #endif
 
-#ifndef PERFORMANCE_COUNTER
-//#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__)
-#define PERFORMANCE_COUNTER() PerformanceCounter __PC(std::source_location::current().function_name())
+#ifndef PERFORMANCE_COUNTER_FUNC
+//#define PERFORMANCE_COUNTER_FUNC() PerformanceCounter __PC(__func__)
+#define PERFORMANCE_COUNTER_FUNC() PerformanceCounter __PC(std::source_location::current().function_name())
 #endif
 
 //!< アセットフォルダ (Asset folder)
@@ -346,7 +346,8 @@ public:
 	PerformanceCounter(std::string_view Label = "");
 	~PerformanceCounter();
 private:
-	LARGE_INTEGER Start;
+	//LARGE_INTEGER Start;
+	std::chrono::system_clock::time_point Start;
 	std::string Label;
 };
 

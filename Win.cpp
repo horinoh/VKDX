@@ -288,18 +288,23 @@ template<> static void Win::LogNG([[maybe_unused]] const WCHAR* Str)
 PerformanceCounter::PerformanceCounter(std::string_view Label)
 	: Label(Label)
 {
-	if (QueryPerformanceCounter(&Start)) {
-	}
+	//if (QueryPerformanceCounter(&Start)) {}
+	Start = std::chrono::system_clock::now();
 }
 PerformanceCounter::~PerformanceCounter() 
 {
-	LARGE_INTEGER End;
-	if (QueryPerformanceCounter(&End)) {
-		LARGE_INTEGER Frequency;
-		if (QueryPerformanceFrequency(&Frequency)) {
+//	LARGE_INTEGER End;
+//	if (QueryPerformanceCounter(&End)) {
+//		LARGE_INTEGER Frequency;
+//		if (QueryPerformanceFrequency(&Frequency)) {
+//#ifdef DEBUG_STDOUT
+//			std::cout << Label << " : " << (End.QuadPart - Start.QuadPart) * 1000 / Frequency.QuadPart << " msec" << std::endl << std::endl;
+//#endif
+//		}
+//	}
+	const auto End = std::chrono::system_clock::now();
 #ifdef DEBUG_STDOUT
-			std::cout << Label << " : " << (End.QuadPart - Start.QuadPart) * 1000 / Frequency.QuadPart << " msec" << std::endl << std::endl;
+	const auto MilliSec = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(End - Start).count() / 1000.0);
+	std::cout << Label << " : " << MilliSec << " msec" << std::endl << std::endl;
 #endif
-		}
-	}
 }

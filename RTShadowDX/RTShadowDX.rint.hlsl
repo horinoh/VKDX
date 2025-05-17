@@ -19,7 +19,8 @@ bool Trace_Sphere(const float3 Center, const float Radius, out float t)
     const float B2 = dot(Tmp0, d);
     const float C = dot(Tmp0, Tmp0) - Radius * Radius;
     const float D4 = B2 * B2 - A * C;
-        
+    
+    t = 0.0f;
     if (D4 >= 0.0f) {
         const float Sq = sqrt(D4);
         const float Tmp1 = (-B2 - Sq) / A;
@@ -56,6 +57,7 @@ bool Trace_AABB(const float3 Center, const float3 Radius, out float t)
     const float3 tMax = max(Tmp0, Tmp1);
     const float t0 = max(max(tMin.x, tMin.y), tMin.z);
     const float t1 = min(min(tMax.x, tMax.y), tMax.z);
+	t = 0.0f;
     if (t0 <= t1) {
         t = t0 < RayTMin() ? t1 : t0;
         if (t >= RayTMin() && t <= RayTCurrent()) {
