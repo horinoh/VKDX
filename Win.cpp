@@ -285,11 +285,12 @@ template<> static void Win::LogNG([[maybe_unused]] const WCHAR* Str)
 #endif
 }
 
-PerformanceCounter::PerformanceCounter(std::string_view Label)
-	: Label(Label)
+PerformanceCounter::PerformanceCounter(std::string_view Lbl)
+	: 
+	Start(Start = std::chrono::system_clock::now()), 
+	Label(Lbl)
 {
 	//if (QueryPerformanceCounter(&Start)) {}
-	Start = std::chrono::system_clock::now();
 }
 PerformanceCounter::~PerformanceCounter() 
 {
@@ -304,7 +305,7 @@ PerformanceCounter::~PerformanceCounter()
 //	}
 	const auto End = std::chrono::system_clock::now();
 #ifdef DEBUG_STDOUT
-	const auto MilliSec = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(End - Start).count() / 1000.0);
+	const auto MilliSec = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(End - Start).count());
 	std::cout << Label << " : " << MilliSec << " msec" << std::endl << std::endl;
 #endif
 }

@@ -343,7 +343,7 @@ private:
 class PerformanceCounter
 {
 public:
-	PerformanceCounter(std::string_view Label = "");
+	PerformanceCounter(std::string_view Lbl = "");
 	~PerformanceCounter();
 private:
 	//LARGE_INTEGER Start;
