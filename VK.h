@@ -1769,6 +1769,13 @@ static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshSha
 }
 #pragma endregion
 #pragma endregion
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceSwapchainMaintenance1FeaturesEXT\n");
+	if (rhs.swapchainMaintenance1) {
+		Win::Log("\t\t\t\tswapchainMaintenance1\n");
+	}
+	return lhs;
+}
 
 static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMemoryProperties& rhs) {
 	Win::Log("\t\t\tMemoryType\n");

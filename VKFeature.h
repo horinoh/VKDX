@@ -109,7 +109,7 @@ public:
 		ExtNames.emplace_back(VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME);
 	}
 	
-	virtual void* GetPtr() override { return &PDNCBF; }
+	virtual void* GetPtr() override { return &PDSMF; }
 
 	VkPhysicalDeviceNestedCommandBufferFeaturesEXT PDNCBF = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NESTED_COMMAND_BUFFER_FEATURES_EXT,
@@ -117,6 +117,11 @@ public:
 		.nestedCommandBuffer = VK_TRUE,
 		.nestedCommandBufferRendering = VK_TRUE,
 		.nestedCommandBufferSimultaneousUse = VK_TRUE
+	};
+	VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT PDSMF = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT,
+		.pNext = &PDNCBF,
+		.swapchainMaintenance1 = VK_TRUE
 	};
 };
 
