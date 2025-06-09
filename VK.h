@@ -1022,10 +1022,14 @@ protected:
 			.flags = 0
 		};
 #endif
-		//!< プレゼント完了同期用 (Wait for presentation finish)
-		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
-		//!< 描画完了同期用 (Wait for render finish)
-		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphore));
+		//!< セマフォはスワップチェインのイメージ数だけ確保する (Acquire semaphores for swapchain image count)
+		for (auto i = 0; i < std::size(Swapchain.ImageAndViews); ++i) {
+			//!< プレゼント完了同期用 (Wait for presentation finish)
+			VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphores.emplace_back()));
+			//!< 描画完了同期用 (Wait for render finish)
+			VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphores.emplace_back()));
+		}
+
 		VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &ComputeSemaphore));
 		LOG_OK();
 	}
@@ -1532,8 +1536,8 @@ protected:
 	VkFence GraphicsFence = VK_NULL_HANDLE;
 	VkFence ComputeFence = VK_NULL_HANDLE;
 
-	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
-	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
+	std::vector<VkSemaphore> NextImageAcquiredSemaphores;		//!< プレゼント完了までウエイト
+	std::vector<VkSemaphore> RenderFinishedSemaphores;			//!< 描画完了するまでウエイト
 	VkSemaphore ComputeSemaphore = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR SurfaceFormat;
@@ -1543,8 +1547,9 @@ protected:
 	using ImageAndView = std::pair<VkImage, VkImageView>;
 	struct Swapchain {
 		VkSwapchainKHR VkSwapchain = VK_NULL_HANDLE;
-		std::vector<ImageAndView> ImageAndViews; 
-		uint32_t Index = 0;
+		std::vector<ImageAndView> ImageAndViews;
+		//!< 初期値は + 1 して 0 になる値にしておく (Initial value is set to a value that becomes 0 when +1 is added)
+		uint32_t Index = (std::numeric_limits<uint32_t>::max)();
 		VkExtent2D Extent;
 	};
 	Swapchain Swapchain;
