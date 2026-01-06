@@ -2,6 +2,10 @@
 
 #include "VKRT.h"
 
+#ifndef GLM_STATIC_ASSERT
+#define GLM_STATIC_ASSERT(x, message) assert(x)
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4100)
 //#pragma warning(disable : 4201)
