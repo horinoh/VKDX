@@ -6,7 +6,7 @@
 class CoreFeature
 {
 public:
-	virtual void* GetPtr() { return &PDV13F; }
+	virtual void* GetPtr() { return &PDV14F; }
 
 	VkPhysicalDeviceVulkan11Features PDV11F = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
@@ -93,6 +93,31 @@ public:
 		.dynamicRendering = VK_TRUE,
 		.shaderIntegerDotProduct = VK_FALSE,
 		.maintenance4 = VK_TRUE,
+	};
+	VkPhysicalDeviceVulkan14Features PDV14F = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+		.pNext = &PDV13F,
+		.globalPriorityQuery = VK_FALSE,
+		.shaderSubgroupRotate = VK_FALSE,
+		.shaderSubgroupRotateClustered = VK_FALSE,
+		.shaderFloatControls2 = VK_FALSE,
+		.shaderExpectAssume = VK_FALSE,
+		.rectangularLines = VK_FALSE,
+		.bresenhamLines = VK_FALSE,
+		.smoothLines = VK_FALSE,
+		.stippledRectangularLines = VK_FALSE,
+		.stippledBresenhamLines = VK_FALSE,
+		.stippledSmoothLines = VK_FALSE,
+		.vertexAttributeInstanceRateDivisor = VK_FALSE,
+		.vertexAttributeInstanceRateZeroDivisor = VK_FALSE,
+		.indexTypeUint8 = VK_FALSE,
+		.dynamicRenderingLocalRead = VK_FALSE,
+		.maintenance5 = VK_FALSE,
+		.maintenance6 = VK_FALSE,
+		.pipelineProtectedAccess = VK_FALSE,
+		.pipelineRobustness = VK_FALSE,
+		.hostImageCopy = VK_FALSE,
+		.pushDescriptor = VK_FALSE,
 	};
 	std::vector<const char*> ExtNames = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME

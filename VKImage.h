@@ -2,6 +2,7 @@
 
 #include "VKRT.h"
 
+// gli で 「GLM_STATIC_ASSERT 定義が無い」とビルドエラーになるので
 #ifndef GLM_STATIC_ASSERT
 #define GLM_STATIC_ASSERT(x, message) assert(x)
 #endif
