@@ -46,7 +46,7 @@
 #define USE_BLAS_COMPACTION //!< [ RTTriangleDX, RTTriangleVK ] ... TLAS もコンパクションできるが、効果が大きいのは BLAS なので、ここでは BLAS のみにしている
 
 //!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
-#define USE_EXPERIMENTAL
+//#define USE_EXPERIMENTAL
 
 #define ALWAYS_REBUILD_PIPELINE
 
@@ -76,11 +76,11 @@
 #include <array>
 #include <fstream>
 
-#ifdef USE_EXPERIMENTAL
-#include <experimental/coroutine>
-#else
+//#ifdef USE_EXPERIMENTAL
+//#include <experimental/coroutine>
+//#else
 #include <coroutine>
-#endif
+//#endif
 
 //#include <cinttypes>
 
@@ -372,12 +372,12 @@ static std::wostream& White(std::wostream& rhs) { Win::SetColor(FOREGROUND_RED |
 #define COUT_NG White << " [ " << Red << "NG" << White << " ]"
 #endif
 
-#ifdef USE_EXPERIMENTAL
-namespace Util {
-	template <typename T> concept HasSize = requires (T lhs) { lhs.size(); };
-	template <HasSize T> size_t size(const T& lhs) { return lhs.size(); }
-
-	template <typename T> concept HasData = requires (T lhs) { lhs.data(); };
-	template <HasData T> const void* data(const T& lhs) { return lhs.data(); }
-}
-#endif
+//#ifdef USE_EXPERIMENTAL
+//namespace Util {
+//	template <typename T> concept HasSize = requires (T lhs) { lhs.size(); };
+//	template <HasSize T> size_t size(const T& lhs) { return lhs.size(); }
+//
+//	template <typename T> concept HasData = requires (T lhs) { lhs.data(); };
+//	template <HasData T> const void* data(const T& lhs) { return lhs.data(); }
+//}
+//#endif
